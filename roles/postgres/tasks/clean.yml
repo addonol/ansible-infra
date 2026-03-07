@@ -1,0 +1,20 @@
+---
+- name: Remove container
+  containers.podman.podman_container:
+    name: "{{ postgres_container_name }}"
+    state: absent
+
+- name: Remove Podman Secrets
+  containers.podman.podman_secret:
+    name: "{{ postgres_secret_db_password_name }}"
+    state: absent
+
+- name: Remove Podman Volumes
+  containers.podman.podman_volume:
+    name: "{{ postgres_volume_name }}"
+    state: absent
+
+- name: Remove Network
+  containers.podman.podman_network:
+    name: "{{ postgres_network }}"
+    state: absent

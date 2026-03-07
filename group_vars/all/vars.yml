@@ -1,0 +1,56 @@
+---
+# ==============================================================================
+# GLOBAL INFRASTRUCTURE SETTINGS
+# ==============================================================================
+airflow_network: "airflow_net"
+airflow_image: "docker.io/apache/airflow:2.11.1-python3.12"
+airflow_executor: "CeleryExecutor"
+
+# Local paths for volume mounting
+airflow_dags_folder: "{{ playbook_dir }}/../airflow/dags"
+
+# ==============================================================================
+# DATABASE SETTINGS (PostgreSQL)
+# ==============================================================================
+postgres_container_name: "airflow_db"
+postgres_db_name: "airflow"
+postgres_db_user: "airflow_user"
+postgres_secret_db_password_name: "postgres_db_password"
+postgres_db_password: "{{ vault_postgres_password }}"
+postgres_volume_name: "postgres_data"
+
+# ==============================================================================
+# BROKER SETTINGS (RabbitMQ)
+# ==============================================================================
+rabbitmq_container_name: "airflow_mq"
+rabbitmq_user: "airflow_broker"
+rabbitmq_password: "{{ vault_rabbitmq_password }}"
+rabbitmq_amqp_port: 5672
+rabbitmq_management_port: 15672
+
+# ==============================================================================
+# AIRFLOW CORE COMPONENTS
+# ==============================================================================
+
+# Scheduler
+airflow_scheduler_container_name: "airflow_scheduler"
+
+# Worker
+airflow_worker_container_name: "airflow_worker"
+
+# Triggerer
+airflow_triggerer_container_name: "airflow_triggerer"
+
+# Webserver
+airflow_webserver_container_name: "airflow_webserver"
+airflow_webserver_port: 8080
+airflow_webserver_secret_key: "{{ vault_airflow_webserver_secret_key }}"
+
+# ==============================================================================
+# AIRFLOW APPLICATION SETTINGS (RBAC & Admin)
+# ==============================================================================
+airflow_admin_user: "admin"
+airflow_admin_firstname: "Admin"
+airflow_admin_lastname: "User"
+airflow_admin_email: "admin@example.com"
+airflow_admin_password: "{{ vault_airflow_admin_password }}"

@@ -1,0 +1,34 @@
+---
+- name: Security Check - Inspect Container Metadata
+  ansible.builtin.command: "podman inspect {{ postgres_container_name }}"
+  register: postgres_container_inspect
+  changed_when: false
+
+- name: Wait for Postgres to be ready
+  ansible.builtin.command:
+    cmd: >
+      podman exec {{ postgres_container_name }}
+      pg_isready -U {{ postgres_db_user }} -d {{ postgres_db_name }}
+  register: postgres_ready
+  until: postgres_ready.rc == 0
+  retries: 20
+  delay: 2
+  changed_when: false
+
+- name: Connectivity Check - Execute SQL query
+  ansible.builtin.command: >
+    podman exec {{ postgres_container_name }}
+    psql -U {{ postgres_db_user }}
+    -d {{ postgres_db_name }}
+    -c "SELECT 1;"
+  register: postgres_query_result
+  changed_when: false
+
+- name: Assert Results (Security & Logic)
+  ansible.builtin.assert:
+    that:
+      - "'(1 row)' in postgres_query_result.stdout"
+      - "vault_postgres_password not in postgres_container_inspect.stdout"
+      - "'postgres_db_password' in postgres_container_inspect.stdout"
+    fail_msg: "SECURITY ALERT: Database test failed or password leaked in inspect!"
+    success_msg: "SUCCESS: Database is reachable and secrets are protected."

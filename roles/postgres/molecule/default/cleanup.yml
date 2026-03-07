@@ -1,0 +1,12 @@
+---
+- name: Cleanup Host Resources
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Include postgres role"
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: clean.yml

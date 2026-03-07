@@ -1,0 +1,86 @@
+---
+- name: Unit Test - Airflow Scheduler (Full Integration)
+  hosts: local
+  gather_facts: false
+
+  tasks:
+    - name: Airflow Scheduler Integration Suite
+      block:
+        # 1. Deploy Infrastructure Dependencies
+        - name: Deploy Postgres Database
+          ansible.builtin.include_role:
+            name: postgres
+
+        - name: Deploy RabbitMQ Broker
+          ansible.builtin.include_role:
+            name: rabbitmq
+
+        # 2. Deploy Scheduler (includes db migrate)
+        - name: Deploy Airflow Scheduler
+          ansible.builtin.include_role:
+            name: airflow_scheduler
+
+        # 3. Verification - Check if Scheduler is running and connected
+        - name: Wait for Scheduler to initialize
+          ansible.builtin.pause:
+            seconds: 20
+
+        - name: Check Scheduler Process Status
+          ansible.builtin.command: "podman exec {{ airflow_scheduler_container_name }} airflow jobs check --job-type SchedulerJob"
+          register: scheduler_check
+          retries: 5
+          delay: 10
+          until: scheduler_check.rc == 0
+          changed_when: false
+
+        - name: Functional Check - Admin User Existence
+          ansible.builtin.command: "podman exec {{ airflow_scheduler_container_name }} airflow users list"
+          register: airflow_users
+          changed_when: false
+
+        - name: Security Check - Verify No Secrets in Inspect
+          ansible.builtin.command: "podman inspect {{ airflow_scheduler_container_name }}"
+          register: scheduler_inspect
+          changed_when: false
+
+        - name: Assert Results
+          ansible.builtin.assert:
+            that:
+              # Check Scheduler is alive in DB
+              - "scheduler_check.rc == 0"
+              # Check Admin user was created
+              - "airflow_admin_user in airflow_users.stdout"
+              # Security: Ensure NO passwords leaked in inspect
+              - "vault_postgres_password not in scheduler_inspect.stdout"
+              - "vault_airflow_admin_password not in scheduler_inspect.stdout"
+              - "'_CMD' in scheduler_inspect.stdout"
+            fail_msg: "Airflow Scheduler functional or security check failed!"
+            success_msg: "Airflow Scheduler is HEARTBEATING and ADMIN user exists."
+
+      always:
+        - name: Cleanup All Resources
+          block:
+            - name: Remove Airflow Containers
+              containers.podman.podman_container:
+                name: "{{ item }}"
+                state: absent
+              loop:
+                - "{{ airflow_scheduler_container_name }}"
+                - "{{ postgres_container_name }}"
+                - "{{ rabbitmq_container_name }}"
+
+            - name: Remove Podman Secrets
+              containers.podman.podman_secret:
+                name: "{{ item }}"
+                state: absent
+              loop:
+                - airflow_db_conn
+                - airflow_fernet_key
+                - airflow_broker_url
+                - postgres_db_password
+                - mq_password
+
+            - name: Remove Network
+              containers.podman.podman_network:
+                name: "{{ airflow_network }}"
+                state: absent

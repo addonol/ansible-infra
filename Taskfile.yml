@@ -1,0 +1,111 @@
+version: '3'
+
+# Variables globales réutilisables
+vars:
+  VAULT_PASS: .vault_pass
+  ANSIBLE_CMD: uv run ansible-playbook
+  ANSIBLE_SKIP_CONFLICT_CHECK: "1"
+  ANSIBLE_DEPRECATION_WARNINGS: "False"
+  VAULT_OPTS: "--vault-password-file {{.VAULT_PASS}}"
+  PLAYBOOKS: "playbooks"
+  MOLECULE_NO_LOG: "True"
+
+tasks:
+
+  default:
+    desc: "List all commands"
+    cmds:
+      - task --list
+    silent: true
+
+  check-vault:
+    internal: true
+    cmds:
+      - test -f {{.VAULT_PASS}} || (echo "❌ Missing {{.VAULT_PASS}}! Create it first." && exit 1)
+    silent: true
+
+  airflow:deploy:
+    desc: "Deploy full Airflow Celery stack"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_full_stack.yml {{.VAULT_OPTS}} -e 'cleanup_all=false'"
+
+  airflow:clean:
+    desc: "Purge Airflow containers, volumes and secrets"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/clean_infrastructure.yml {{.VAULT_OPTS}}"
+
+  deploy:postgres:
+    desc: "Deploy standalone PostgreSQL instance"
+    deps: [check-vault]
+    cmds:
+      - >
+        {{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/deploy_postgres.yml {{.VAULT_OPTS}}
+        -e "postgres_db_user=my_db_user"
+        -e "postgres_db_name=my_db_name"
+        -e "postgres_volume_name=postgres_data"
+        -e "postgres_network=postgres_net"
+        -e "postgres_container_name=postgres_db"
+
+  db:shell:
+    desc: "Open a psql shell in the running container"
+    cmds:
+      - podman exec -it airflow_db psql -U airflow_user -d airflow
+
+  mq:deploy:
+    desc: "Deploy standalone RabbitMQ broker"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_rabbitmq.yml {{.VAULT_OPTS}}"
+
+  lint:
+    desc: "Run pre-commit quality checks (Ansible & Python)"
+    cmds:
+      - uv run pre-commit run --all-files
+
+  vault:edit:
+    desc: "Edit encrypted secrets"
+    deps: [check-vault]
+    cmds:
+      - uv run ansible-vault edit group_vars/all/vault.yml {{.VAULT_OPTS}}
+
+  stats:
+    desc: "Show resource usage of all containers"
+    cmds:
+      - podman stats --no-stream
+
+  clean:volumes:
+    desc: "Remove all orphaned Podman volumes"
+    cmds:
+      - podman volume rm $(podman volume ls -q) || true
+    silent: true
+
+  clean:secrets:
+    desc: "Remove all orphaned Podman secrets"
+    cmds:
+      - podman secret rm $(podman secret ls -q) || true
+    silent: true
+
+  test:molecule:postgres:
+    desc: "Run clean Molecule tests for Postgres"
+    dir: roles/postgres
+    cmds:
+      - uv run molecule reset
+      - uv run molecule test
+    env:
+      ANSIBLE_DEPRECATION_WARNINGS: "False"
+
+  test:deploy:postgres:
+    desc: "Deploy standalone PostgreSQL instance"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_postgres.yml {{.VAULT_OPTS}}"
+
+  clean:postgres:
+    desc: Purge Postgres resources
+    cmds:
+      - >
+        {{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/clean_postgres.yml
+        -e "postgres_network=postgres_net"
+        -e "postgres_container_name=postgres_db"

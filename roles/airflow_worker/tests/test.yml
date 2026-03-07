@@ -1,0 +1,6 @@
+---
+- name: Functional Test for Airflow Worker Role
+  hosts: localhost
+  connection: local
+  roles:
+    - airflow_worker

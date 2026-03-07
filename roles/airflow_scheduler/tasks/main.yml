@@ -1,0 +1,100 @@
+---
+
+- name: Create Podman secret for Fernet Key
+  containers.podman.podman_secret:
+    name: airflow_fernet_key
+    data: "{{ vault_airflow_fernet_key }}"
+    state: present
+  no_log: true
+
+- name: Create Podman secret for Database Connection String
+  containers.podman.podman_secret:
+    name: airflow_db_conn
+    data: "postgresql+psycopg2://{{ postgres_db_user }}:{{ vault_postgres_password }}@{{ postgres_container_name }}:5432/{{ postgres_db_name }}"
+    state: present
+  no_log: true
+
+- name: Create Podman secret for Celery Broker URL
+  containers.podman.podman_secret:
+    name: airflow_broker_url
+    data: "amqp://{{ rabbitmq_user }}:{{ vault_rabbitmq_password }}@{{ rabbitmq_container_name }}:5672//"
+    state: present
+  no_log: true
+
+- name: Create Podman secret for Airflow Admin password
+  containers.podman.podman_secret:
+    name: airflow_admin_password
+    data: "{{ vault_airflow_admin_password }}"
+    state: present
+  no_log: true
+
+- name: Generate Airflow configuration
+  ansible.builtin.template:
+    src: airflow.cfg.j2
+    dest: "/tmp/airflow_bootstrap.cfg"
+    mode: '0644'
+  no_log: true
+
+- name: Initialize Airflow Database (db migrate)
+  containers.podman.podman_container:
+    name: airflow_init
+    image: "{{ airflow_image }}"
+    network: "{{ airflow_network }}"
+    user: "0:0"
+    command: db migrate
+    rm: true  # Auto-delete after success
+    detach: false
+    secrets:
+      - airflow_fernet_key
+      - airflow_db_conn
+    env:
+      AIRFLOW_CONFIG: "/opt/airflow/airflow.cfg"
+    volume:
+      - "/tmp/airflow_bootstrap.cfg:/opt/airflow/airflow.cfg:Z"
+
+- name: Launch Airflow Scheduler container
+  containers.podman.podman_container:
+    name: "{{ airflow_scheduler_container_name }}"
+    image: "{{ airflow_image }}"
+    state: started
+    restart_policy: always
+    network: "{{ airflow_network }}"
+    command: scheduler
+    secrets:
+      - airflow_fernet_key
+      - airflow_db_conn
+      - airflow_broker_url
+      - airflow_admin_password
+    env:
+      AIRFLOW_CONFIG: "/opt/airflow/airflow.cfg"
+    volume:
+      - "/tmp/airflow_bootstrap.cfg:/opt/airflow/airflow.cfg:Z"
+      - "{{ airflow_dags_folder }}:/opt/airflow/dags:Z"
+      - "airflow_logs:/opt/airflow/logs:Z"
+
+- name: Create Airflow Admin user
+  containers.podman.podman_container:
+    name: airflow_create_user
+    image: "{{ airflow_image }}"
+    network: "{{ airflow_network }}"
+    command: >
+      users create
+      --username {{ airflow_admin_user }}
+      --firstname {{ airflow_admin_firstname }}
+      --lastname {{ airflow_admin_lastname }}
+      --role Admin
+      --email {{ airflow_admin_email }}
+      --password "${ADMIN_PASSWORD}"
+    rm: true  # Auto-delete after success
+    detach: false
+    secrets:
+      - airflow_admin_password
+      - airflow_db_conn
+      - airflow_fernet_key
+    env:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_CMD: "cat /run/secrets/airflow_db_conn"
+      AIRFLOW__CORE__FERNET_KEY_CMD: "cat /run/secrets/airflow_fernet_key"
+      ADMIN_PASSWORD: "{{ vault_airflow_admin_password }}"
+  no_log: true
+  register: airflow_scheduler_user_creation
+  changed_when: "'Admin user admin created' in airflow_scheduler_user_creation.stdout"

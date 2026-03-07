@@ -1,0 +1,18 @@
+namespace: addonol
+name: ansible_infra
+version: 1.0.0
+authors:
+  - "addonol"
+description: "Infrastructure Airflow avec Postgres et RabbitMQ"
+readme: README.md
+license:
+  - MIT
+tags:
+  - infrastructure
+  - podman
+  - container
+  - airflow
+  - postgres
+  - rabbitmq
+  - rootless
+repository: "https://github.com"

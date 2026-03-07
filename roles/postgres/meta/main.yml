@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: addonol
+  description: Persistent PostgreSQL database container for Airflow metadata.
+  company: none
+  license: MIT
+  min_ansible_version: "2.12"
+  galaxy_tags:
+    - postgres
+    - sql
+    - database
+    - podman
+    - storage
+dependencies: []

@@ -1,0 +1,6 @@
+---
+- name: Functional Test for RabbitMQ Role
+  hosts: localhost
+  connection: local
+  roles:
+    - rabbitmq

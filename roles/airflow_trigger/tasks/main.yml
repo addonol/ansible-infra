@@ -1,0 +1,17 @@
+---
+- name: Launch Airflow Triggerer container
+  containers.podman.podman_container:
+    name: "{{ airflow_triggerer_container_name }}"
+    image: "{{ airflow_image }}"
+    state: started
+    restart_policy: always
+    network: "{{ airflow_network }}"
+    command: triggerer
+    secrets:
+      - airflow_fernet_key
+      - airflow_db_conn
+    env:
+      AIRFLOW_CONFIG: "/opt/airflow/airflow.cfg"
+    volume:
+      - "/tmp/airflow_bootstrap.cfg:/opt/airflow/airflow.cfg:Z"
+      - "airflow_logs:/opt/airflow/logs:Z"

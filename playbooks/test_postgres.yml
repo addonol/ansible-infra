@@ -1,0 +1,23 @@
+---
+- name: Unit Test - Postgres Role (Security & Connectivity)
+  hosts: local
+  gather_facts: false
+
+  tasks:
+    - name: Postgres Test Suite
+      block:
+        - name: Deploy Role
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: main.yml
+
+        - name: Verify Postgres
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: verify.yml
+
+      always:
+        - name: Purging Resources
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: clean.yml

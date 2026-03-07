@@ -1,0 +1,67 @@
+---
+- name: Unit Test - Airflow Webserver
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all/vars.yml"
+    - "{{ playbook_dir }}/../group_vars/all/vault.yml"
+
+  tasks:
+    - name: Webserver Integration Suite
+      block:
+        - name: Deploy Core Services
+          ansible.builtin.include_role:
+            name: "{{ item }}"
+          loop:
+            - postgres
+            - rabbitmq
+            - airflow_scheduler
+
+        - name: Deploy Webserver
+          ansible.builtin.include_role:
+            name: airflow_webserver
+
+        - name: Wait for Webserver to be ready
+          ansible.builtin.uri:
+            url: "http://localhost:{{ airflow_webserver_port }}/health"
+            status_code: 200
+          register: web_health
+          retries: 15
+          delay: 5
+          until: web_health.status == 200
+
+        - name: Assert Results
+          ansible.builtin.assert:
+            that:
+              - "web_health.status == 200"
+              - "'healthy' in web_health.json.metadatabase.status"
+            success_msg: "Airflow UI is ONLINE and CONNECTED to Database!"
+
+      always:
+        - name: Cleanup All Resources
+          block:
+            - name: Remove Airflow Containers
+              containers.podman.podman_container:
+                name: "{{ item }}"
+                state: absent
+              loop:
+                - "{{ airflow_webserver_container_name }}"
+                - "{{ airflow_scheduler_container_name }}"
+                - "{{ postgres_container_name }}"
+                - "{{ rabbitmq_container_name }}"
+
+            - name: Remove Podman Secrets
+              containers.podman.podman_secret:
+                name: "{{ item }}"
+                state: absent
+              loop:
+                - airflow_db_conn
+                - airflow_fernet_key
+                - airflow_broker_url
+                - postgres_db_password
+                - mq_password
+
+            - name: Remove Network
+              containers.podman.podman_network:
+                name: "{{ airflow_network }}"
+                state: absent

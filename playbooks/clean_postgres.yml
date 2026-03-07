@@ -1,0 +1,10 @@
+---
+- name: Purging - Postgres Role
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Postgres Purging Resources
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: clean.yml

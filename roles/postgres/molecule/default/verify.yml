@@ -1,0 +1,34 @@
+---
+- name: Verify Postgres Installation
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: Wait for PostgreSQL to start inside the container
+      ansible.builtin.shell: >
+        podman exec {{ postgres_container_name }}
+        pg_isready -U {{ postgres_db_user }} -d {{ postgres_db_name }}
+      register: postgres_check
+      until: postgres_check.rc == 0
+      retries: 15
+      delay: 5
+      changed_when: false
+      delegate_to: localhost
+
+    - name: Confirm database is accessible and user is correct
+      ansible.builtin.shell: >
+        podman exec {{ postgres_container_name }}
+        psql -U {{ postgres_db_user }} -d {{ postgres_db_name }}
+        -c "SELECT current_user; SELECT current_database();"
+      register: postgres_db_query
+      changed_when: false
+      delegate_to: localhost
+
+    - name: Assert PostgreSQL results
+      ansible.builtin.assert:
+        that:
+          - postgres_db_user in postgres_db_query.stdout
+          - postgres_db_name in postgres_db_query.stdout
+        success_msg: "PostgreSQL is UP, database '{{ postgres_db_name }}' exists and is accessible!"

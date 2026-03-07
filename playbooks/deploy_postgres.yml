@@ -1,0 +1,23 @@
+---
+- name: Deployment - Postgres Role
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Postgres Deployment Phase
+      block:
+        - name: Deploy Role
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: main.yml
+
+        - name: Verify Postgres
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: verify.yml
+
+      rescue:
+        - name: 🚨 FAILURE DETECTED - Purging Resources
+          ansible.builtin.include_role:
+            name: postgres
+            tasks_from: clean.yml

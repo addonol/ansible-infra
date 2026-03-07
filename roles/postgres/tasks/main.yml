@@ -1,0 +1,33 @@
+---
+- name: Ensure podman network exists
+  containers.podman.podman_network:
+    name: "{{ postgres_network }}"
+    state: present
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: Create Podman secret for Postgres password
+  containers.podman.podman_secret:
+    name: "{{ postgres_secret_db_password_name }}"
+    data: "{{ vault_postgres_password }}"
+    state: present
+  no_log: true
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: Launch Postgres container
+  containers.podman.podman_container:
+    name: "{{ postgres_container_name }}"
+    image: "docker.io/library/postgres:16-alpine"
+    state: started
+    restart_policy: always
+    network: "{{ postgres_network }}"
+    secrets:
+      - "{{ postgres_secret_db_password_name }}"
+    env:
+      POSTGRES_DB: "{{ postgres_db_name }}"
+      POSTGRES_USER: "{{ postgres_db_user }}"
+      POSTGRES_PASSWORD_FILE: "/run/secrets/{{ postgres_secret_db_password_name }}"
+    volumes:
+      - "{{ postgres_volume_name }}:/var/lib/postgresql/data:Z"
+    ports:
+      - "{{ postgres_port_number }}:5432"
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"

@@ -1,0 +1,5 @@
+---
+postgres_container_name: "airflow_db"
+postgres_db_name: "airflow"
+postgres_db_user: "airflow_user"
+postgres_network: "postgres_net"

@@ -1,0 +1,58 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: podman
+
+platforms:
+  - name: instance_debian
+    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    pre_build_image: true
+    delete_volumes: true
+
+  - name: instance_ubuntu
+    image: docker.io/geerlingguy/docker-ubuntu2204-ansible:latest
+    pre_build_image: true
+    delete_volumes: true
+
+  - name: instance_fedora
+    image: docker.io/geerlingguy/docker-fedora39-ansible:latest
+    pre_build_image: true
+    delete_volumes: true
+
+  - name: instance_rocky
+    image: docker.io/geerlingguy/docker-rockylinux9-ansible:latest
+    pre_build_image: true
+    delete_volumes: true
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+      stdout_callback: ansible.builtin.default
+      result_format: yaml
+      roles_path: ../../../roles
+    ssh_connection:
+      pipelining: true
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy

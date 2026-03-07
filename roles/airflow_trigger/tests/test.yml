@@ -1,0 +1,6 @@
+---
+- name: Functional Test for Airflow Trigger Role
+  hosts: localhost
+  connection: local
+  roles:
+    - airflow_trigger
