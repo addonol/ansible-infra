@@ -25,7 +25,7 @@ A collection of **high-quality, standalone Ansible roles** designed for modern, 
 | Role | Status | OS Support | Description |
 | :--- | :--- | :--- | :--- |
 | [**PostgreSQL**](./roles/postgres) | ✅ Ready | Debian, Ubuntu, Fedora, Rocky | Standalone DB with persistent storage. |
-| [**RabbitMQ**](./roles/rabbitmq) | 🚧 WIP | Multi-OS | Message broker with management UI. |
+| [**RabbitMQ**](./roles/rabbitmq) | ✅ Ready | Debian, Ubuntu, Fedora, Rocky | Message broker with management UI. |
 | **Airflow Stack** | 📅 Roadmap | - | Complete Celery-based Airflow cluster. |
 
 

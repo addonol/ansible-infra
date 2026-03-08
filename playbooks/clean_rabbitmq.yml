@@ -1,0 +1,10 @@
+---
+- name: Purging - RabbitMQ Role
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: RabbitMQ Purging Resources
+      ansible.builtin.include_role:
+        name: rabbitmq
+        tasks_from: clean.yml

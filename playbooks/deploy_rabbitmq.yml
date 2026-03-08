@@ -1,23 +1,23 @@
 ---
-- name: Unit Test - Postgres Role (Security & Connectivity)
-  hosts: local
+- name: Deployment - RabbitMQ broker Role
+  hosts: all
   gather_facts: false
 
   tasks:
-    - name: Postgres Test Suite
+    - name: RabbitMQ broker Deployment Phase
       block:
         - name: Deploy Role
           ansible.builtin.include_role:
-            name: postgres
+            name: rabbitmq
             tasks_from: main.yml
 
-        - name: Verify Postgres
+        - name: Verify RabbitMQ broker
           ansible.builtin.include_role:
-            name: postgres
+            name: rabbitmq
             tasks_from: verify.yml
 
-      always:
-        - name: Purging Resources
+      rescue:
+        - name: 🚨 FAILURE DETECTED - Purging Resources
           ansible.builtin.include_role:
-            name: postgres
+            name: rabbitmq
             tasks_from: clean.yml

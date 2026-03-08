@@ -154,8 +154,36 @@ tasks:
   rabbitmq:deploy:
     desc: "Deploy standalone RabbitMQ broker"
     deps: [check-vault]
+    silent: true
     cmds:
-      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/test_rabbitmq.yml"
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_rabbitmq.yml
+        -e "rabbitmq_container_name=rabbitmq_broker"
+        -e "rabbitmq_image=docker.io/library/rabbitmq:3.13-management-alpine"
+        -e "rabbitmq_network=rabbitmq_net"
+        -e "rabbitmq_user=mq_admin"
+        -e "rabbitmq_secret_pass_name=rabbitmq_password"
+        -e "rabbitmq_management_port=5672"
+        -e "rabbitmq_ui_port=15672"
+        -e "rabbitmq_volume_name=rabbitmq_data"
+
+  rabbitmq:purge:
+    desc: "Purge all RabbitMQ broker resources"
+    silent: true
+    cmds:
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_rabbitmq.yml
+        -e "postgres_volume_name=rabbitmq_data"
+        -e "postgres_network=rabbitmq_net"
+
+  rabbitmq:test:
+    desc: "Run Molecule unit tests for RabbitMQ broker (Multi-OS)"
+    dir: roles/rabbitmq
+    silent: true
+    cmds:
+      - uv run molecule reset
+      - uv run molecule test
+      - podman volume prune -f
 
   # ----------------------------------------------------------------------------
   # SECTION: TEST

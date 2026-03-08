@@ -1,2 +1,17 @@
 ---
-#
+# Container configuration
+rabbitmq_container_name: "rabbitmq_broker"
+rabbitmq_image: "docker.io/library/rabbitmq:3.13-management-alpine"
+rabbitmq_network: "rabbitmq_net"
+
+# RabbitMQ Settings
+rabbitmq_user: "mq_admin"
+# The secret name in Podman
+rabbitmq_secret_pass_name: "rabbitmq_password"
+
+# Ports (Management UI & AMQP)
+rabbitmq_management_port: 5672
+rabbitmq_ui_port: 15672
+
+# Persistence
+rabbitmq_volume_name: "rabbitmq_data"

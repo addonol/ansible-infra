@@ -1,0 +1,9 @@
+---
+vault_rabbitmq_password: "testpassword123"
+rabbitmq_container_name: "rabbitmq_broker_molecule_{{ inventory_hostname }}"
+rabbitmq_network: "rabbitmq_net_{{ inventory_hostname }}"
+rabbitmq_user: "mq_admin"
+rabbitmq_secret_pass_name: "rabbitmq_password_{{ inventory_hostname }}"
+rabbitmq_management_port: "{{ 5672 + (ansible_play_hosts.index(inventory_hostname)) }}"
+rabbitmq_ui_port: "{{ 15672 + (ansible_play_hosts.index(inventory_hostname)) }}"
+rabbitmq_volume_name: "rabbitmq_data_{{ inventory_hostname }}"

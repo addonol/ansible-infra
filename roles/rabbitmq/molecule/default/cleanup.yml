@@ -1,0 +1,18 @@
+---
+- name: Final Cleanup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Purge named resources (containers, networks)
+      ansible.builtin.include_role:
+        name: rabbitmq
+        tasks_from: clean.yml
+      vars:
+        rabbitmq_container_name: "rabbitmq_molecule_{{ item }}"
+        rabbitmq_network: "rabbitmq_net_{{ item }}"
+        rabbitmq_secret_pass_name: "rabbitmq_password_{{ item }}"
+        rabbitmq_volume_name: "rabbitmq_data_{{ item }}"
+      loop: "{{ groups['all'] | default(['localhost']) }}"
+      ignore_errors: true # noqa ignore-errors

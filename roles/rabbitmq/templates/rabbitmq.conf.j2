@@ -1,11 +1,11 @@
 # Core credentials
-default_user = {{ rabbitmq_user }}
+default_user = {{ rabbitmq_user | default('mq_admin') }}
 default_pass = {{ vault_rabbitmq_password }}
 
-# Fix deprecation warnings
+# Fix deprecation
 deprecated_features.permit.management_metrics_collection = true
 
-# Modern logging (fixes log.console error)
+# Logging
 log.file = false
 log.console = true
 log.console.level = info

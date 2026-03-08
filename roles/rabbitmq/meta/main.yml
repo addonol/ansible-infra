@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: addonol
-  description: RabbitMQ message broker with management UI for Airflow Celery.
+  description: RabbitMQ message broker with management UI.
   company: none
   license: MIT
   min_ansible_version: "2.12"

@@ -1,0 +1,12 @@
+---
+- name: Verify RabbitMQ broker Installation
+  hosts: all:!localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Include RabbitMQ broker role with task 'verify'"
+      ansible.builtin.include_role:
+        name: rabbitmq
+        tasks_from: verify
