@@ -16,7 +16,7 @@
 - name: Launch Postgres container
   containers.podman.podman_container:
     name: "{{ postgres_container_name }}"
-    image: "docker.io/library/postgres:16-alpine"
+    image: "{{ postgres_image }}"
     state: started
     restart_policy: always
     network: "{{ postgres_network }}"

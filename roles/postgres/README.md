@@ -1,76 +1,72 @@
-# 🐘 Ansible Role: PostgreSQL (Podman Rootless)
+# 🐘 Ansible Role: PostgreSQL (Containerized & Rootless)
 
-This Ansible role deploys and manages a **PostgreSQL** container instance using **Podman** in rootless mode. It is specifically optimized to serve as the metadata database for **Apache Airflow**, ensuring security and idempotency.
+This Ansible role deploys and manages a standalone **PostgreSQL** instance using **Podman** in **rootless mode**. Designed as a modular infrastructure component, it ensures security, data persistence, and multi-OS compliance.
 
 ## 🌟 Key Features
-*   **100% Rootless**: Runs without `sudo` privileges using Podman user namespaces.
-*   **Security First**: Uses **Podman Secrets** for sensitive data (passwords) instead of environment variables.
-*   **Full Lifecycle**: Manages networks, secrets, volumes, and container states.
-*   **Molecule Tested**: Includes a robust test suite for automated validation.
+*   **Rootless Isolation**: Deploys without `sudo` privileges, enhancing host security.
+*   **Security First**: Password injection via **Podman Secrets** (prevents leaks in `process list` or `inspect`).
+*   **Full Idempotency**: Manages the entire lifecycle (networks, volumes, secrets, and containers).
+*   **Multi-Platform Validation**: Tested via **Molecule** across Debian, Ubuntu, Fedora, and Rocky Linux.
 
-## 🛠 Requirements
-*   **Podman** (Rootless mode must be configured on the host).
-*   **Ansible Collection**: `containers.podman` (v1.15.0+).
-*   **Python 3.12+** on the control node (managed via `uv`).
+## 🛠 Prerequisites
+*   **Target Host**: Podman installed and configured (rootless mode enabled).
+*   **Control Node**: Python 3.12+ (managed via `uv` recommended).
+*   **Collections**: `containers.podman` (v1.15.0+).
 
 ## 📦 Role Variables
 
-Variables are organized to allow easy overriding via `group_vars` or playbook parameters.
+Variables are designed to be easily overridden via your inventory or playbooks.
 
-### Default Variables (`defaults/main.yml`)
+### Configuration Parameters (`defaults/main.yml`)
 
-
-| Variable | Default Value | Description |
+| Variable | Default | Description |
 | :--- | :--- | :--- |
-| `postgres_container_name` | `postgres_db` | Name of the Podman container. |
-| `postgres_db_name` | `custom_app_db` | Name of the database to create. |
-| `postgres_db_user` | `dev_user` | Primary database user. |
-| `postgres_network` | `postgres_net` | Podman network to attach to. |
-| `postgres_image` | `postgres:16-alpine` | Docker image to pull and run. |
+| `postgres_image` | `docker.io/library/postgres:16-alpine` | Official Docker image to use. |
+| `postgres_container_name` | `postgres_db` | Name of the Podman instance. |
+| `postgres_db_name` | `postgres_db` | Initial database name. |
+| `postgres_db_user` | `postgres_user` | Primary database owner. |
+| `postgres_network` | `postgres_net` | Dedicated Podman network. |
+| `postgres_port_number` | `5432` | Port exposed on the host (127.0.0.1). |
+| `postgres_volume_name` | `postgres_data` | Persistent volume for data storage
+| `postgres_secret_db_password_name` | `postgres_db_password` | Name of the podman secret
 
-### Sensitive Variables (Ansible Vault)
-
+### Sensitive Variables (Encrypted)
 
 | Variable | Source | Description |
 | :--- | :--- | :--- |
-| `vault_postgres_password` | `vault.yml` | Encrypted master password for the database. |
+| `vault_postgres_password` | `vault.yml` | Master password (Ansible Vault). |
 
-## 🔗 Dependencies
-None. This is a standalone infrastructure role.
 
 ## 🚀 Example Playbook
 
-To deploy a standard PostgreSQL instance for Airflow:
+Standard deployment for a generic application:
 
 ```yaml
 - name: Deploy Database Tier
-  hosts: localhost
+  hosts: db_servers
   roles:
     - role: postgres
+      # Optional
       vars:
-        postgres_db_name: "custom_app_db"
-        postgres_db_user: "dev_user"
+        postgres_db_name: "inventory_prod"
+        postgres_db_user: "manager"
+        ...
 ```
 
-## 🧪 Testing with Molecule
+## 🧪 Automated Testing (Molecule)
 
-This role includes a comprehensive Molecule test suite. It validates that the database is not only running but also accessible and correctly initialized.
-
-To run the full test sequence:
+The role uses Molecule to validate infrastructure across a heterogeneous environment.
 
 ```bash
-# Navigate to the role directory
-cd roles/postgres
-
-# Run the test suite using uv
-uv run molecule test
+# Run unit tests on all supported platforms
+task postgres:test
 ```
 
-The test cycle covers:
+The test suite verifies:
 
-- Prepare: Injecting dummy secrets into the test container.
-- Converge: Applying the role using delegate_to: localhost.
-- Verify: Running psql queries inside the container via podman exec.
+- **Integrity**: Secure creation of secrets and volumes on the host.
+- **Portability**: Successful deployment on Debian, Ubuntu, Fedora, and Rocky Linux.
+- **Service**: Execution of real SQL queries to validate availability
 
 
 ## 📄 License

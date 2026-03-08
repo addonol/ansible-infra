@@ -36,6 +36,12 @@ provisioner:
       stdout_callback: ansible.builtin.default
       result_format: yaml
       roles_path: ../../../roles
+      display_skipped_hosts: false
+      display_ok_hosts: true
+      deprecation_warnings: false
+      action_warnings: false
+      verbosity: 0
+
     ssh_connection:
       pipelining: true
 
@@ -50,7 +56,6 @@ scenario:
     - destroy
     - syntax
     - create
-    - prepare
     - converge
     - idempotence
     - verify

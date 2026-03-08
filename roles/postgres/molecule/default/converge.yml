@@ -1,6 +1,6 @@
 ---
 - name: Converge Postgres Role
-  hosts: localhost
+  hosts: all:!localhost
   gather_facts: false
   vars_files:
     - test_vars.yml

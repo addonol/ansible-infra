@@ -1,111 +1,199 @@
 version: '3'
 
-# Variables globales réutilisables
-vars:
-  VAULT_PASS: .vault_pass
-  ANSIBLE_CMD: uv run ansible-playbook
-  ANSIBLE_SKIP_CONFLICT_CHECK: "1"
+# ==============================================================================
+# GLOBAL CONFIGURATION
+# ==============================================================================
+env:
+  PYTHONWARNINGS: "ignore:.*Driver podman does not provide a schema.*"
   ANSIBLE_DEPRECATION_WARNINGS: "False"
-  VAULT_OPTS: "--vault-password-file {{.VAULT_PASS}}"
-  PLAYBOOKS: "playbooks"
+  ANSIBLE_SKIP_CONFLICT_CHECK: "1"
   MOLECULE_NO_LOG: "True"
 
+vars:
+  VAULT_PASS: .vault_pass
+  VAULT_OPTS: "--vault-password-file {{.VAULT_PASS}}"
+  ANSIBLE_PLAY: uv run ansible-playbook
+  PLAYBOOKS: "playbooks"
+
+# ==============================================================================
+# TASKS
+# ==============================================================================
 tasks:
 
   default:
-    desc: "List all commands"
+    desc: "📖 List all available commands"
     cmds:
-      - task --list
+      - |
+        BLUE=$(tput setaf 4); CYAN=$(tput setaf 6); WHITE=$(tput setaf 7); BOLD=$(tput bold); RESET=$(tput sgr0);
+
+        task --list | grep "^\*" | awk -v b="$BLUE" -v c="$CYAN" -v w="$WHITE" -v r="$RESET" -v bd="$BOLD" '
+          BEGIN {
+            last_grp = "";
+            width = 100;
+            col_cmd = 30;
+            col_gap = 5;
+            limit = 60;
+
+            banner = ""; for (i=1; i<=width; i++) banner = banner "=";
+            sep = ""; for (i=1; i<=width; i++) sep = sep "─";
+
+            print bd b banner r;
+            print "  🏗️  " bd "ANSIBLE INFRASTRUCTURE CONTROL CENTER" r;
+            print bd b banner r;
+          }
+          {
+            split($2, parts, ":");
+            current_grp = parts[1];
+
+            if (last_grp != "" && current_grp != last_grp) {
+                icon = "🛠️";
+                if (current_grp == "airflow") icon = "🚀";
+                else if (current_grp == "postgres") icon = "🐘";
+                else if (current_grp == "rabbitmq") icon = "🐰";
+                else if (current_grp == "test") icon = "🧪";
+                else if (current_grp == "vault") icon = "🔐";
+                else if (current_grp == "infra") icon = "⚙️";
+
+                printf "\n %s%s %s %s %s\n", bd, b, toupper(current_grp), icon, r;
+                printf " %s%s%s\n", b, sep, r;
+            }
+
+            cmd = $2;
+            # --- NETTOYAGE DE LA DESCRIPTION (Suppression des emojis au début) ---
+            desc = ""; for(i=3; i<=NF; i++) desc = desc $i (i==NF?"":" ");
+            gsub(/^[^\x00-\x7F]+\s*/, "", desc); # Supprime les caractères non-ASCII (emojis) au début
+
+            printf "  %s%-*s%s", bd c, col_cmd, cmd, r;
+
+            first_line = 1;
+            while (length(desc) > 0) {
+                if (!first_line) printf "  %-*s%*s", col_cmd, "", col_gap, "";
+                else printf "%*s", col_gap, "";
+
+                if (length(desc) <= limit) {
+                    line = desc; desc = "";
+                } else {
+                    split_pos = limit;
+                    while (split_pos > 0 && substr(desc, split_pos, 1) != " ") split_pos--;
+                    if (split_pos == 0) split_pos = limit;
+                    line = substr(desc, 1, split_pos);
+                    desc = substr(desc, split_pos + 1);
+                }
+                gsub(/^ +| +$/, "", line);
+                printf "%s%s%s\n", w, line, r;
+                first_line = 0;
+            }
+            last_grp = current_grp;
+          }
+          END { print "\n" bd b banner r }
+        '
     silent: true
+
+
+  # ----------------------------------------------------------------------------
+  # SECTION: AIRFLOW
+  # ----------------------------------------------------------------------------
+
+  airflow:deploy:
+    desc: "Deploy full Airflow Celery stack"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/test_airflow_full_stack.yml {{.VAULT_OPTS}}"
+
+  airflow:purge:
+    desc: "💣 Purge Airflow stack (Containers, Secrets, Volumes)"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_airflow_stack.yml"
+
+  # ----------------------------------------------------------------------------
+  # SECTION: POSTGRES
+  # ----------------------------------------------------------------------------
+
+  postgres:deploy:
+    desc: "Deploy standalone PostgreSQL instance"
+    deps: [check-vault]
+    silent: true
+    cmds:
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_postgres.yml
+        -e "postgres_db_user=my_db_user"
+        -e "postgres_db_name=my_db_name"
+        -e "postgres_volume_name=postgres_data"
+        -e "postgres_network=postgres_net"
+        -e "postgres_container_name=postgres_db"
+        -e "postgres_port_number=5432"
+
+  postgres:shell:
+    desc: "Open interactive psql shell in container"
+    cmds:
+      - podman exec -it airflow_db psql -U airflow_user -d airflow
+
+  postgres:purge:
+    desc: "Purge all PostgreSQL resources"
+    silent: true
+    cmds:
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_postgres.yml
+        -e "postgres_volume_name=postgres_data"
+        -e "postgres_network=postgres_net"
+
+  postgres:test:
+    desc: "Run Molecule unit tests for Postgres (Multi-OS)"
+    dir: roles/postgres
+    silent: true
+    cmds:
+      - uv run molecule reset
+      - uv run molecule test
+      - podman volume prune -f
+
+  # ----------------------------------------------------------------------------
+  # SECTION: RABBITMQ
+  # ----------------------------------------------------------------------------
+
+  rabbitmq:deploy:
+    desc: "Deploy standalone RabbitMQ broker"
+    deps: [check-vault]
+    cmds:
+      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/test_rabbitmq.yml"
+
+  # ----------------------------------------------------------------------------
+  # SECTION: TEST
+  # ----------------------------------------------------------------------------
+
+  test:lint:
+    desc: "Run pre-commit quality checks"
+    cmds:
+      - uv run pre-commit run --all-files
+
+  # ----------------------------------------------------------------------------
+  # SECTION: INFRA
+  # ----------------------------------------------------------------------------
+
+  infra:podman:stats:
+    desc: "Show Podman resource usage (RAM/CPU)"
+    cmds:
+      - podman stats --no-stream
+
+  infra:podman:clean:
+    desc: "Remove ALL orphaned volumes and secrets (System Prune)"
+    cmds:
+      - podman volume prune -f
+      - podman secret rm $(podman secret ls -q) || true
+    silent: true
+
+  infra:vault:edit:
+    desc: "Edit encrypted secrets with Ansible Vault"
+    deps: [check-vault]
+    cmds:
+      - uv run ansible-vault edit group_vars/all/vault.yml {{.VAULT_OPTS}}
+
+  # ----------------------------------------------------------------------------
+  # INTERNAL
+  # ----------------------------------------------------------------------------
 
   check-vault:
     internal: true
     cmds:
       - test -f {{.VAULT_PASS}} || (echo "❌ Missing {{.VAULT_PASS}}! Create it first." && exit 1)
     silent: true
-
-  airflow:deploy:
-    desc: "Deploy full Airflow Celery stack"
-    deps: [check-vault]
-    cmds:
-      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_full_stack.yml {{.VAULT_OPTS}} -e 'cleanup_all=false'"
-
-  airflow:clean:
-    desc: "Purge Airflow containers, volumes and secrets"
-    deps: [check-vault]
-    cmds:
-      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/clean_infrastructure.yml {{.VAULT_OPTS}}"
-
-  deploy:postgres:
-    desc: "Deploy standalone PostgreSQL instance"
-    deps: [check-vault]
-    cmds:
-      - >
-        {{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/deploy_postgres.yml {{.VAULT_OPTS}}
-        -e "postgres_db_user=my_db_user"
-        -e "postgres_db_name=my_db_name"
-        -e "postgres_volume_name=postgres_data"
-        -e "postgres_network=postgres_net"
-        -e "postgres_container_name=postgres_db"
-
-  db:shell:
-    desc: "Open a psql shell in the running container"
-    cmds:
-      - podman exec -it airflow_db psql -U airflow_user -d airflow
-
-  mq:deploy:
-    desc: "Deploy standalone RabbitMQ broker"
-    deps: [check-vault]
-    cmds:
-      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_rabbitmq.yml {{.VAULT_OPTS}}"
-
-  lint:
-    desc: "Run pre-commit quality checks (Ansible & Python)"
-    cmds:
-      - uv run pre-commit run --all-files
-
-  vault:edit:
-    desc: "Edit encrypted secrets"
-    deps: [check-vault]
-    cmds:
-      - uv run ansible-vault edit group_vars/all/vault.yml {{.VAULT_OPTS}}
-
-  stats:
-    desc: "Show resource usage of all containers"
-    cmds:
-      - podman stats --no-stream
-
-  clean:volumes:
-    desc: "Remove all orphaned Podman volumes"
-    cmds:
-      - podman volume rm $(podman volume ls -q) || true
-    silent: true
-
-  clean:secrets:
-    desc: "Remove all orphaned Podman secrets"
-    cmds:
-      - podman secret rm $(podman secret ls -q) || true
-    silent: true
-
-  test:molecule:postgres:
-    desc: "Run clean Molecule tests for Postgres"
-    dir: roles/postgres
-    cmds:
-      - uv run molecule reset
-      - uv run molecule test
-    env:
-      ANSIBLE_DEPRECATION_WARNINGS: "False"
-
-  test:deploy:postgres:
-    desc: "Deploy standalone PostgreSQL instance"
-    deps: [check-vault]
-    cmds:
-      - "{{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/test_postgres.yml {{.VAULT_OPTS}}"
-
-  clean:postgres:
-    desc: Purge Postgres resources
-    cmds:
-      - >
-        {{.ANSIBLE_CMD}} {{.PLAYBOOKS}}/clean_postgres.yml
-        -e "postgres_network=postgres_net"
-        -e "postgres_container_name=postgres_db"
