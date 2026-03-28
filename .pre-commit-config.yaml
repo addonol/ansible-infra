@@ -1,3 +1,7 @@
+ci:
+  skip: [ansible-lint]
+  autofix_commit_msg: "[pre-commit.ci] auto fixes"
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -20,9 +24,8 @@ repos:
     rev: v26.3.0
     hooks:
       - id: ansible-lint
-        files: \.(yaml|yml)$
-        exclude: dags/
         language_version: python3.12
+        entry: env ANSIBLE_COLLECTIONS_PATH=~/.ansible/collections ansible-lint --force-color
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0

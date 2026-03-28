@@ -4,3 +4,6 @@ exclude_paths:
     - "**/molecule/*/test_vars.yml"
     - "**/molecule/*/roles/*"
     - dags/
+
+warn_list:
+    - yaml[new-line-at-end-of-file]
