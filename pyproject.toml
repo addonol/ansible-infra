@@ -9,7 +9,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "apache-airflow==3.1.8",
+    "apache-airflow==3.1.7",
     "go-task-bin>=3.48.0",
     "molecule-plugins[podman]>=25.8.12",
     "pre-commit>=4.5.1",
