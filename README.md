@@ -1,84 +1,77 @@
-# 🏗️ Ansible Infrastructure (Podman Rootless)
+# Ansible Infrastructure (Podman Rootless)
 
+A collection of professional, standalone Ansible roles for secure infrastructure orchestration. This repository focuses on **Rootless Podman** deployments, ensuring zero-privilege security and production-grade reliability.
 
-A collection of **high-quality, standalone Ansible roles** designed for modern, secure infrastructure. This project focuses on **Rootless Podman** orchestration, ensuring zero-privilege deployments and production-grade security.
+> **Architecture Note**: Unlike traditional roles that assume root access, this stack is built from the ground up for **Non-Root containers** and **Podman Secrets** integration.
 
-> **Why this repository?**
-> Most Ansible roles assume root access. This one is built for security-first environments where **Rootless containers** and **Podman Secrets** are the standard.
+## Core Principles
 
+*   **Security First**: 100% Rootless deployments. No `sudo` required on target hosts.
+*   **Secret Management**: Native integration with **Podman Secrets** to prevent credential leaks in environment variables or metadata.
+*   **Enterprise Testing**: Every role is validated via **Molecule** across Debian, Ubuntu, Fedora, and Rocky Linux.
+*   **Modern Toolchain**: Powered by `uv` for Python dependency management and `Taskfile` for streamlined automation.
 
-## 🌟 Key Features
+## Available Infrastructure Roles
 
-*   🛡️ **Security First**: 100% Rootless deployments. No `sudo` required.
-*   🔐 **Secret Management**: Native integration with **Podman Secrets** (No more passwords in environment variables).
-*   🧪 **Bulletproof Testing**: Every role is unit-tested with **Molecule** across Debian, Ubuntu, Fedora, and Rocky Linux.
-*   🚀 **Modern Tooling**:
-    *   **uv**: Blazing fast Python dependency management.
-    *   **Taskfile**: Simple, grouped automation commands.
-    *   **Ansible-Lint & Gitleaks**: Industrial-grade quality and security checks.
-
-
-
-## 📦 Available Roles
-
-
-| Role | Status | OS Support | Description |
+| Role | Status | Targets | Description |
 | :--- | :--- | :--- | :--- |
-| [**PostgreSQL**](./roles/postgres) | ✅ Ready | Debian, Ubuntu, Fedora, Rocky | Standalone DB with persistent storage. |
-| [**RabbitMQ**](./roles/rabbitmq) | ✅ Ready | Debian, Ubuntu, Fedora, Rocky | Message broker with management UI. |
-| **Airflow Stack** | 📅 Roadmap | - | Complete Celery-based Airflow cluster. |
+| [**PostgreSQL**](./roles/postgres) | Stable | Debian, Ubuntu, Fedora, Rocky | Standalone DB with persistent storage and health monitoring. |
+| [**RabbitMQ**](./roles/rabbitmq) | Stable | Debian, Ubuntu, Fedora, Rocky | Message broker with Management UI and EPMD stability fixes. |
+| [**Airflow Common**](./roles/airflow_common) | Stable | Debian, Ubuntu, Fedora, Rocky | Core Airflow 3 initialization, DB migrations, and admin provisioning. |
+| [**Airflow Services**](./roles/airflow_services) | Stable | Debian, Ubuntu, Fedora, Rocky | Scalable execution of Webserver, Scheduler, and Celery Workers. |
 
-
-
-## 🛠️ Getting Started
+## Quick Start
 
 ### 1. Prerequisites
-Ensure you have the following installed on your control node:
-*   [**uv**](https://docs.astral.sh/uv/) (Python manager)
+
+Ensure the following tools are installed on your control node:
+*   [**uv**](https://docs.astral.sh/uv/) (Python package manager)
 *   [**go-task**](https://taskfile.dev) (Task runner)
-*   [**Podman**](https://podman.io) (Rootless mode configured)
+*   [**Podman**](https://podman.io) (Configured in Rootless mode)
 
 ### 2. Installation
+
 ```bash
-# Clone the repo
+# Clone the repository
 git clone https://github.com/addonol/ansible-infra.git
 cd ansible-infra
 
-# Install dependencies (Python & Collections)
+# Synchronize virtual environment and install collections
 uv sync
+ansible-galaxy collection install -r requirements.yml
 ```
 
-### 3. Usage
+### 3. Basic Usage
+
 ```bash
-# List all available commands
+# List all available infrastructure commands
 task --list
 
 # Deploy a standalone Postgres instance
 task postgres:deploy
 ```
 
-## 🧪 Development & Quality
+## Quality Assurance & CI/CD
 
-We take quality seriously. Before any push, we run a full suite of tests.
+We enforce strict quality standards through automated testing and linting.
 
-## Run Molecule Tests
+### Molecule Testing
+
 ```bash
-# Test a specific role (e.g., Postgres) on 4 different OS
 task postgres:test
 ```
 
-## Security & Linting
+### Security & Linting
+
+Run the security suite (Gitleaks, Ansible-Lint, Ruff) before pushing:
 
 ```bash
-# Run all pre-commit hooks (Gitleaks, Ansible-Lint, Ruff)
 task test:lint
 ```
 
-## 🤝 Contributing
+## License
+MIT
 
-Contributions are welcome! Whether it's a bug report, a new feature, or documentation improvement.
-
-
-## 👤 Author
+## Author
 addonol
 Infrastructure Architect & Automation Specialist
