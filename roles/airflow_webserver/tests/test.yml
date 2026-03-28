@@ -1,6 +1,0 @@
----
-- name: Functional Test for Airflow Webserver Role
-  hosts: localhost
-  connection: local
-  roles:
-    - airflow_webserver

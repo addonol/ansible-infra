@@ -1,9 +1,15 @@
 ---
-vault_postgres_password: "testpassword123"
-postgres_secret_db_password_name: "postgres_db_password_{{ inventory_hostname }}"
-postgres_db_name: "postgres_db"
-postgres_db_user: "postgres_user"
-postgres_container_name: "postgres_molecule_{{ inventory_hostname }}"
-postgres_network: "postgres_net_{{ inventory_hostname }}"
-postgres_port_number: "{{ 5432 + (ansible_play_hosts.index(inventory_hostname)) }}"
-postgres_volume_name: "postgres_data_{{ inventory_hostname }}"
+
+idx: "{{ ansible_play_hosts_all.index(inventory_hostname) }}"
+
+test_postgres_image: "docker.io/library/postgres:16-alpine"
+test_postgres_instance: "postgres_molecule_{{ inventory_hostname }}"
+test_postgres_volume: "postgres_molecule_data_{{ inventory_hostname }}"
+test_postgres_network: "infra_net_{{ inventory_hostname }}"
+test_postgres_secret_name: "postgres_molecule_{{ inventory_hostname }}_password"
+test_postgres_port: "{{ 5432 + idx | int }}"
+test_postgres_db_name: "molecule_test_db"
+test_postgres_db_user: "molecule_test_user"
+test_postgres_db_pass: "molecule_test_password"
+test_postgres_purge_data: true
+test_postgres_purge_network: true

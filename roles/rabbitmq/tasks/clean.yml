@@ -1,30 +1,45 @@
 ---
-- name: Remove RabbitMQ container
+
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    rabbitmq_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Remove RabbitMQ container: {{ rabbitmq_instance }}"
   containers.podman.podman_container:
-    name: "{{ rabbitmq_container_name }}"
+    name: "{{ rabbitmq_instance }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  register: rabbitmq_container
+  failed_when:
+    - rabbitmq_container.failed | default(false)
+    - "'no such container' not in rabbitmq_container.msg | default('')"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
 
-- name: Remove RabbitMQ secret
+- name: "Remove RabbitMQ secrets"
   containers.podman.podman_secret:
-    name: "{{ rabbitmq_secret_pass_name }}"
+    name: "{{ item }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  loop:
+    - "{{ rabbitmq_secret_name }}"
+    - "{{ rabbitmq_instance }}_config"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
 
-- name: Remove RabbitMQ volume
+- name: "Remove RabbitMQ volume: {{ rabbitmq_volume }}"
   containers.podman.podman_volume:
-    name: "{{ rabbitmq_volume_name }}"
+    name: "{{ rabbitmq_volume }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+  when: rabbitmq_purge_data | default(false) | bool
 
-- name: Remove RabbitMQ network
+- name: "Remove network: {{ rabbitmq_network }}"
   containers.podman.podman_network:
     name: "{{ rabbitmq_network }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+  when: rabbitmq_purge_network | default(false) | bool
 
-- name: Remove temporary configuration file from host
-  ansible.builtin.file:
-    path: "/tmp/rabbitmq_{{ rabbitmq_container_name }}.conf"
-    state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+- name: "Status: Cleanup Summary for {{ rabbitmq_instance }}"
+  ansible.builtin.debug:
+    msg:
+      - "CLEANUP COMPLETE: {{ rabbitmq_instance }}"
+      - "Volume purged: {{ rabbitmq_purge_data | bool }}"
+      - "Secrets removed: {{ rabbitmq_secret_name }}, {{ rabbitmq_instance }}_config"

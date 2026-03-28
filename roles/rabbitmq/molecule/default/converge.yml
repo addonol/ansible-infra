@@ -1,11 +1,23 @@
 ---
-- name: Converge RabbitMQ broker Role
+
+- name: Converge RabbitMQ Role
   hosts: all:!localhost
   gather_facts: false
   vars_files:
     - test_vars.yml
 
   tasks:
-    - name: "Include RabbitMQ broker role"
+    - name: "Deploy RabbitMQ instance for Molecule"
       ansible.builtin.include_role:
         name: rabbitmq
+        tasks_from: main.yml
+      vars:
+        rabbitmq_image: "{{ test_rabbitmq_image }}"
+        rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+        rabbitmq_volume: "{{ test_rabbitmq_volume }}"
+        rabbitmq_network: "{{ test_rabbitmq_network }}"
+        rabbitmq_secret_name: "{{ test_rabbitmq_secret_name }}"
+        rabbitmq_user: "{{ test_rabbitmq_user }}"
+        rabbitmq_pass: "{{ test_rabbitmq_pass }}"
+        rabbitmq_management_port: "{{ test_rabbitmq_management_port | int }}"
+        rabbitmq_ui_port: "{{ test_rabbitmq_ui_port | int }}"

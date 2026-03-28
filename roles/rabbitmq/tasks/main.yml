@@ -1,40 +1,55 @@
 ---
-- name: Ensure podman network exists
-  containers.podman.podman_network:
-    name: "{{ rabbitmq_network | default('rabbitmq_net') }}"
-    state: present
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
 
-- name: Create Podman secret for RabbitMQ password
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    rabbitmq_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Ensure network exists: {{ rabbitmq_network }}"
+  containers.podman.podman_network:
+    name: "{{ rabbitmq_network }}"
+    state: present
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+
+- name: "Create password secret: {{ rabbitmq_secret_name }}"
   containers.podman.podman_secret:
-    name: "{{ rabbitmq_secret_pass_name | default('rabbitmq_password') }}"
-    data: "{{ vault_rabbitmq_password }}"
+    name: "{{ rabbitmq_secret_name }}"
+    data: "{{ rabbitmq_pass }}"
     state: present
   no_log: true
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
 
-- name: Create RabbitMQ configuration from template
-  ansible.builtin.template:
-    src: rabbitmq.conf.j2
-    dest: "/tmp/rabbitmq_{{ rabbitmq_container_name }}.conf"
-    mode: '0644'
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+- name: "Create RabbitMQ config secret for instance: {{ rabbitmq_instance ~ '_config' }}"
+  containers.podman.podman_secret:
+    name: "{{ rabbitmq_instance }}_config"
+    data: "{{ lookup('template', 'rabbitmq.conf.j2') }}"
+    state: present
+  delegate_to: "{{ rabbitmq_delegate_host }}"
 
-- name: Launch RabbitMQ container
+- name: "Launch RabbitMQ container: {{ rabbitmq_instance }}"
   containers.podman.podman_container:
-    name: "{{ rabbitmq_container_name }}"
-    image: "{{ rabbitmq_image | default('docker.io/library/rabbitmq:3-management-alpine') }}"
+    name: "{{ rabbitmq_instance }}"
+    image: "{{ rabbitmq_image }}"
     state: started
+    hostname: "{{ rabbitmq_instance }}"
+    etc_hosts: "{{ {rabbitmq_instance: '127.0.0.1'} }}"
+    recreate: false
     restart_policy: always
-    network: "{{ rabbitmq_network | default('rabbitmq_net') }}"
+    network: "{{ rabbitmq_network }}"
+    userns: keep-id
     secrets:
-      - "{{ rabbitmq_secret_pass_name | default('rabbitmq_password') }}"
+      - "{{ rabbitmq_secret_name }}"
+      - "{{ rabbitmq_instance }}_config"
     env:
-      RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
+      RABBITMQ_CONFIG_FILE: "/run/secrets/{{ rabbitmq_instance }}_config"
+      RABBITMQ_NODENAME: "rabbit@{{ rabbitmq_instance }}"
     ports:
-      - "{{ rabbitmq_management_port | default('5672') }}:5672"
-      - "{{ rabbitmq_ui_port | default('15672') }}:15672"
+      - "{{ rabbitmq_management_port | mandatory }}:5672"
+      - "{{ rabbitmq_ui_port | mandatory }}:15672"
     volumes:
-      - "/tmp/rabbitmq_{{ rabbitmq_container_name }}.conf:/etc/rabbitmq/rabbitmq.conf:Z"
-      - "{{ rabbitmq_volume_name | default('rabbitmq_data') }}:/var/lib/rabbitmq:Z"
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+      - "{{ rabbitmq_volume }}:/var/lib/rabbitmq:Z"
+    health_cmd: "rabbitmq-diagnostics -q check_running"
+    health_interval: "20s"
+    health_timeout: "10s"
+    health_retries: 10
+    health_start_period: "60s"
+  delegate_to: "{{ rabbitmq_delegate_host }}"

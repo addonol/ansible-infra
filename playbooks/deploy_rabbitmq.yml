@@ -1,23 +1,26 @@
 ---
-- name: Deployment - RabbitMQ broker Role
+
+- name: Deployment - Standalone RabbitMQ Broker
   hosts: all
   gather_facts: false
 
   tasks:
-    - name: RabbitMQ broker Deployment Phase
+    - name: Orchestrating RabbitMQ Instance
       block:
-        - name: Deploy Role
+        - name: Execute Deployment
           ansible.builtin.include_role:
             name: rabbitmq
             tasks_from: main.yml
 
-        - name: Verify RabbitMQ broker
+        - name: Execute Validation
           ansible.builtin.include_role:
             name: rabbitmq
             tasks_from: verify.yml
 
       rescue:
-        - name: 🚨 FAILURE DETECTED - Purging Resources
+        - name: "🚨 FAILURE DETECTED - Rolling back"
           ansible.builtin.include_role:
             name: rabbitmq
             tasks_from: clean.yml
+          vars:
+            rabbitmq_purge_data: false

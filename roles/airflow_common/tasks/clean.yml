@@ -1,0 +1,37 @@
+---
+
+- name: Set cleanup facts
+  ansible.builtin.set_fact:
+    airflow_common_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Remove Airflow Podman secrets"
+  containers.podman.podman_secret:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ airflow_common_config }}"
+  delegate_to: "{{ airflow_common_delegate_host }}"
+  register: airflow_common_secret_rm_res
+  failed_when:
+    - "airflow_common_secret_rm_res.failed"
+    - "'no such secret' not in airflow_common_secret_rm_res.msg | lower"
+
+- name: "Remove Airflow init containers"
+  containers.podman.podman_container:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - "airflow_init_db_{{ inventory_hostname | default('default') }}"
+    - "airflow_init_user_{{ inventory_hostname | default('default') }}"
+    - "airflow_init_db"
+    - "airflow_init_user"
+  delegate_to: "{{ airflow_common_delegate_host }}"
+  register: airflow_common_container_rm_res
+  failed_when:
+    - "airflow_common_container_rm_res.failed"
+    - "'no such container' not in airflow_common_container_rm_res.msg | lower"
+    - "'could not find' not in airflow_common_container_rm_res.msg | lower"
+
+- name: "Cleanup complete for Airflow Common"
+  ansible.builtin.debug:
+    msg: "Airflow configuration secrets and init-containers have been purged."

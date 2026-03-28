@@ -1,0 +1,4 @@
+---
+
+airflow_common_executor: CeleryExecutor
+airflow_common_load_examples: false

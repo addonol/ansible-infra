@@ -1,0 +1,48 @@
+---
+
+- name: Purging - Airflow 3 Stack
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: "App - Purge Airflow 3 Services"
+      ansible.builtin.include_role:
+        name: airflow_services
+        tasks_from: clean.yml
+      vars:
+        airflow_services_name: "{{ item }}"
+      loop:
+        - worker
+        - triggerer
+        - dag-processor
+        - scheduler
+        - webserver
+
+    - name: "App - Purge Airflow Common Secrets"
+      ansible.builtin.include_role:
+        name: airflow_common
+        tasks_from: clean.yml
+
+    - name: "Infra - Purge Standalone RabbitMQ"
+      ansible.builtin.include_role:
+        name: rabbitmq
+        tasks_from: clean.yml
+      vars:
+        rabbitmq_instance: "{{ airflow_rabbitmq_instance }}"
+        rabbitmq_purge_data: "{{ airflow_common_purge_data | bool }}"
+        rabbitmq_volume: "{{ airflow_rabbitmq_volume }}"
+
+    - name: "Infra - Purge Standalone Postgres"
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: clean.yml
+      vars:
+        postgres_instance: "{{ airflow_postgres_instance }}"
+        postgres_purge_data: "{{ airflow_common_purge_data | bool }}"
+        postgres_volume: "{{ airflow_postgres_volume }}"
+
+    - name: "Global - Remove shared network"
+      containers.podman.podman_network:
+        name: "{{ airflow_common_network }}"
+        state: absent
+      when: airflow_common_purge_network | bool

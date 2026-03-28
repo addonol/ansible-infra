@@ -1,83 +1,56 @@
 ---
-# ==============================================================================
-# GLOBAL INFRASTRUCTURE SETTINGS
-# ==============================================================================
-airflow_network: "airflow_net"
-airflow_image: "docker.io/apache/airflow:2.11.1-python3.12"
-airflow_executor: "CeleryExecutor"
-
-# Local paths for volume mounting
-airflow_dags_folder: "{{ playbook_dir }}/../airflow/dags"
 
 # ==============================================================================
-# DATABASE SETTINGS (PostgreSQL)
+# 🗄️ DATABASE (Postgres Standalone)
 # ==============================================================================
-
-# Container configuration
-postgres_container_name: "postgres"
-postgres_image: "docker.io/library/postgres:16-alpine"
-postgres_network: "postgres_network"
-
-# Postgres Settings
-postgres_db_name: "postgres_db"
-postgres_db_user: "postgres_user"
-postgres_db_password: "{{ vault_postgres_password }}"
-
-# The secret name in Podman
-postgres_secret_db_password_name: "postgres_db_password"
-
-# Ports
-postgres_port_number: 5432
-
-# Persistence
-postgres_volume_name: "postgres_data"
+airflow_postgres_instance: "airflow_postgres"
+airflow_postgres_db_name: "airflow_db"
+airflow_postgres_db_user: "airflow_user"
+airflow_postgres_db_pass: "{{ vault_postgres_password }}"
+airflow_postgres_volume: "airflow_pg_data"
+airflow_postgres_port: 5432
 
 
 # ==============================================================================
-# BROKER SETTINGS (RabbitMQ)
+# 🐰 BROKER (RabbitMQ Standalone)
 # ==============================================================================
+airflow_rabbitmq_instance: "airflow_rabbitmq"
+airflow_rabbitmq_user: "mq_admin"
+airflow_rabbitmq_pass: "{{ vault_rabbitmq_password }}"
+airflow_rabbitmq_volume: "airflow_mq_data"
+airflow_rabbitmq_management_port: 5672
 
-# Container configuration
-rabbitmq_container_name: "rabbitmq_broker"
-rabbitmq_image: "docker.io/library/rabbitmq:3.13-management-alpine"
-rabbitmq_network: "rabbitmq_net"
-
-# RabbitMQ Settings
-rabbitmq_user: "mq_admin"
-
-# The secret name in Podman
-rabbitmq_secret_pass_name: "rabbitmq_password"
-
-# Ports (Management UI & AMQP)
-rabbitmq_management_port: 5672
-rabbitmq_ui_port: 15672
-
-# Persistence
-rabbitmq_volume_name: "rabbitmq_data"
 
 # ==============================================================================
-# AIRFLOW CORE COMPONENTS
+# 🌍 AIRFLOW
 # ==============================================================================
-
-# Scheduler
-airflow_scheduler_container_name: "airflow_scheduler"
-
-# Worker
-airflow_worker_container_name: "airflow_worker"
-
-# Triggerer
-airflow_triggerer_container_name: "airflow_triggerer"
-
-# Webserver
-airflow_webserver_container_name: "airflow_webserver"
-airflow_webserver_port: 8080
-airflow_webserver_secret_key: "{{ vault_airflow_webserver_secret_key }}"
-
-# ==============================================================================
-# AIRFLOW APPLICATION SETTINGS (RBAC & Admin)
-# ==============================================================================
-airflow_admin_user: "admin"
-airflow_admin_firstname: "Admin"
-airflow_admin_lastname: "User"
-airflow_admin_email: "admin@example.com"
-airflow_admin_password: "{{ vault_airflow_admin_password }}"
+airflow_common_executor: "CeleryExecutor"
+airflow_common_load_examples: "false"
+airflow_common_execution_api_url: "http://airflow_webserver_{{ inventory_hostname | default('prod') }}:8080/execution/"
+airflow_common_network: "infra_net"
+airflow_common_image: "docker.io/apache/airflow:3.1.7-python3.12"
+airflow_common_webserver_port: 8080
+airflow_common_purge_network: false
+airflow_common_purge_data: false
+airflow_common_project_root: "{{ playbook_dir }}/.."
+airflow_common_dags_folder: "{{ airflow_common_project_root }}/airflow/dags"
+airflow_common_logs_folder: "{{ airflow_common_project_root }}/airflow/logs"
+airflow_common_config_dir: "{{ airflow_base_dir }}/config"
+airflow_common_instance: "airflow"
+airflow_common_admin_user: "admin"
+airflow_common_admin_pass: "{{ vault_airflow_admin_password }}"
+airflow_common_admin_email: "admin@example.com"
+airflow_common_fernet_key: "{{ vault_airflow_fernet_key }}"
+airflow_common_webserver_secret_key: "{{ vault_airflow_webserver_secret_key }}"
+airflow_common_jwt_secret: "{{ vault_airflow_webserver_secret_key }}"
+airflow_common_config: "airflow_config"
+airflow_common_admin_pass_secret_name: "airflow_pass"
+airflow_common_postgres_instance: "{{ airflow_postgres_instance }}"
+airflow_common_postgres_db_user: "{{ airflow_postgres_db_user }}"
+airflow_common_postgres_db_pass: "{{ airflow_postgres_db_pass }}"
+airflow_common_postgres_db_name: "{{ airflow_postgres_db_name }}"
+airflow_common_postgres_port: "{{ airflow_postgres_port }}"
+airflow_common_rabbitmq_instance: "{{ airflow_rabbitmq_instance }}"
+airflow_common_rabbitmq_user: "{{ airflow_rabbitmq_user }}"
+airflow_common_rabbitmq_pass: "{{ airflow_rabbitmq_pass }}"
+airflow_common_rabbitmq_management_port: "{{ airflow_rabbitmq_management_port }}"

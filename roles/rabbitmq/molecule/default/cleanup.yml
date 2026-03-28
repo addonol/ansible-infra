@@ -1,18 +1,20 @@
 ---
-- name: Final Cleanup
-  hosts: localhost
-  connection: local
+
+- name: Cleanup for Molecule RabbitMQ Tests
+  hosts: all:!localhost
   gather_facts: false
+  vars_files:
+    - test_vars.yml
 
   tasks:
-    - name: Purge named resources (containers, networks)
+    - name: "Purge Molecule resources for each tested OS"
       ansible.builtin.include_role:
         name: rabbitmq
         tasks_from: clean.yml
       vars:
-        rabbitmq_container_name: "rabbitmq_molecule_{{ item }}"
-        rabbitmq_network: "rabbitmq_net_{{ item }}"
-        rabbitmq_secret_pass_name: "rabbitmq_password_{{ item }}"
-        rabbitmq_volume_name: "rabbitmq_data_{{ item }}"
-      loop: "{{ groups['all'] | default(['localhost']) }}"
-      ignore_errors: true # noqa ignore-errors
+        rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+        rabbitmq_volume: "{{ test_rabbitmq_volume }}"
+        rabbitmq_network: "{{ test_rabbitmq_network }}"
+        rabbitmq_secret_name: "{{ test_rabbitmq_secret_name }}"
+        rabbitmq_purge_data: "{{ test_rabbitmq_purge_data }}"
+        rabbitmq_purge_network: "{{ test_rabbitmq_purge_network }}"

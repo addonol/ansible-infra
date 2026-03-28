@@ -1,11 +1,23 @@
 ---
+
 - name: Converge Postgres Role
   hosts: all:!localhost
-  gather_facts: false
+  gather_facts: true
   vars_files:
     - test_vars.yml
 
   tasks:
-    - name: "Include postgres role"
+    - name: "Deploy Postgres instance for Molecule"
       ansible.builtin.include_role:
         name: postgres
+        tasks_from: main.yml
+      vars:
+        postgres_image: "{{ test_postgres_image }}"
+        postgres_instance: "{{ test_postgres_instance }}"
+        postgres_volume: "{{ test_postgres_volume }}"
+        postgres_secret_name: "{{ test_postgres_secret_name }}"
+        postgres_network: "{{ test_postgres_network }}"
+        postgres_port: "{{ test_postgres_port }}"
+        postgres_db_name: "{{ test_postgres_db_name }}"
+        postgres_db_user: "{{ test_postgres_db_user }}"
+        postgres_db_pass: "{{ test_postgres_db_pass }}"

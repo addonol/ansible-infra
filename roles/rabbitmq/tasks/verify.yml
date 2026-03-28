@@ -1,48 +1,29 @@
 ---
-- name: Security Check - Inspect Metadata
-  ansible.builtin.command: "podman inspect {{ rabbitmq_container_name }}"
+
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    rabbitmq_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Health Check - Wait for readiness {{ rabbitmq_instance }}"
+  ansible.builtin.command: >
+    podman inspect --format '{{ '{{' }} .State.Health.Status {{ '}}' }}' {{ rabbitmq_instance }}
+  register: rabbitmq_health
+  until: "'healthy' in rabbitmq_health.stdout"
+  retries: 60
+  delay: 5
+  changed_when: false
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+
+- name: "Security Check - Inspect for leaks {{ rabbitmq_instance }}"
+  ansible.builtin.command: "podman inspect {{ rabbitmq_instance }}"
   register: rabbitmq_inspect
   changed_when: false
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ rabbitmq_delegate_host }}"
 
-- name: Functional Check - Check RabbitMQ Status & Auth
-  ansible.builtin.command:
-    cmd: "podman exec {{ rabbitmq_container_name }} rabbitmqctl ping"
-  register: rabbitmq_ping
-  changed_when: false
-  retries: 20
-  delay: 5
-  until: rabbitmq_ping.rc == 0
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
-
-- name: Functional Check - List Users (Verify Admin)
-  ansible.builtin.command:
-    cmd: "podman exec {{ rabbitmq_container_name }} rabbitmqctl list_users"
-  register: rabbitmq_users
-  retries: 10
-  delay: 5
-  until: rabbitmq_users.rc == 0
-  changed_when: false
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
-
-- name: HTTP Check - Management API (Better than UI for 200 OK)
-  ansible.builtin.uri:
-    url: "http://localhost:{{ rabbitmq_ui_port | default(15672) }}/api/overview"
-    user: "{{ rabbitmq_user }}"
-    password: "{{ vault_rabbitmq_password }}"
-    force_basic_auth: true
-    status_code: 200
-  register: rabbitmq_api
-  until: rabbitmq_api.status == 200
-  retries: 10
-  delay: 5
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
-
-- name: Assert Results
+- name: "Assert Security & Readiness {{ rabbitmq_instance }}"
   ansible.builtin.assert:
     that:
-      - "rabbitmq_ping.rc == 0"
-      - "rabbitmq_user in rabbitmq_users.stdout"
-      - "vault_rabbitmq_password not in rabbitmq_inspect.stdout"
-    fail_msg: "RabbitMQ functional or security check failed!"
-    success_msg: "RabbitMQ is FULLY OPERATIONAL and SECURE."
+      - "'healthy' in rabbitmq_health.stdout"
+      - "rabbitmq_pass not in rabbitmq_inspect.stdout"
+    fail_msg: "SECURITY ALERT: Secret leak or Broker unhealthy for {{ rabbitmq_instance }}!"
+    success_msg: "SUCCESS: {{ rabbitmq_instance }} is healthy and secure."

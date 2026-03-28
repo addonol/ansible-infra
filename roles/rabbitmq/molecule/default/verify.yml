@@ -1,12 +1,34 @@
 ---
-- name: Verify RabbitMQ broker Installation
+
+- name: Verify RabbitMQ Role Deployment
   hosts: all:!localhost
   gather_facts: false
+  serial: 1
   vars_files:
     - test_vars.yml
 
   tasks:
-    - name: "Include RabbitMQ broker role with task 'verify'"
+    - name: "Run the role's built-in verification"
       ansible.builtin.include_role:
         name: rabbitmq
-        tasks_from: verify
+        tasks_from: verify.yml
+      vars:
+        rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+        rabbitmq_pass: "{{ test_rabbitmq_pass }}"
+
+    - name: "Functional Check - Verify RabbitMQ Status via CLI"
+      ansible.builtin.command: >
+        podman exec {{ test_rabbitmq_instance }}
+        rabbitmq-diagnostics -q check_running
+      register: rabbitmq_diag
+      until: rabbitmq_diag.rc == 0
+      retries: 10
+      delay: 5
+      changed_when: false
+      delegate_to: localhost
+
+    - name: "Final Assert - Broker Integrity"
+      ansible.builtin.assert:
+        that:
+          - "rabbitmq_diag.rc == 0"
+        success_msg: "SUCCESS: Molecule instance {{ inventory_hostname }} is fully functional!"

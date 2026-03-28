@@ -1,0 +1,25 @@
+---
+
+galaxy_info:
+  author: addonol
+  description: >
+    Multi-purpose Airflow 3 service orchestrator.
+    This role dynamically deploys Airflow components (Webserver, Scheduler,
+    Worker, Triggerer) using Podman. It reuses shared configurations
+    and secrets for a consistent and isolated Celery stack.
+  company: none
+  license: MIT
+  min_ansible_version: "2.12"
+  galaxy_tags:
+    - airflow
+    - airflow3
+    - scheduler
+    - webserver
+    - worker
+    - podman
+    - container
+    - infrastructure
+
+# Logical dependency: This role requires airflow_common to be run first
+# to ensure secrets and database migrations are ready.
+dependencies: []

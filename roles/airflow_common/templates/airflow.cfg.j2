@@ -1,0 +1,29 @@
+[core]
+executor = {{ airflow_common_executor }}
+dags_folder = /opt/airflow/dags
+load_examples = {{ airflow_common_load_examples }}
+fernet_key = {{ airflow_common_fernet_key }}
+auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+internal_api_secret_key = {{ airflow_common_jwt_secret }}
+
+[database]
+{% set postgres_uri = "postgresql+psycopg2://" ~ airflow_common_postgres_db_user ~ ":" ~ (airflow_common_postgres_db_pass | urlencode) %}
+sql_alchemy_conn = {{ postgres_uri }}@{{ airflow_common_postgres_instance }}:5432/{{ airflow_common_postgres_db_name }}
+
+[celery]
+{% set rabbitmq_uri = "amqp://" ~ airflow_common_rabbitmq_user ~ ":" ~ (airflow_common_rabbitmq_pass | urlencode) %}
+broker_url = {{ rabbitmq_uri }}@{{ airflow_common_rabbitmq_instance }}:{{ airflow_common_rabbitmq_management_port }}//
+result_backend = db+postgresql://{{ airflow_common_postgres_db_user }}:{{ airflow_common_postgres_db_pass | urlencode }}@{{ airflow_common_postgres_instance }}:{{ airflow_common_postgres_port}}/{{ airflow_common_postgres_db_name }}
+
+[api_fastapi.auth.tokens]
+jwt_secret = {{ airflow_common_jwt_secret }}
+
+[api]
+auth_backends = airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth
+secret_key = {{ airflow_common_webserver_secret_key }}
+
+[api_auth]
+jwt_secret = {{ airflow_common_jwt_secret }}
+
+[webserver]
+secret_key = {{ airflow_common_webserver_secret_key }}

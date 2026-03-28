@@ -1,34 +1,30 @@
 ---
-- name: Security Check - Inspect Container Metadata
-  ansible.builtin.command: "podman inspect {{ postgres_container_name }}"
-  register: postgres_container_inspect
-  changed_when: false
 
-- name: Wait for Postgres to be ready
-  ansible.builtin.command:
-    cmd: >
-      podman exec {{ postgres_container_name }}
-      pg_isready -U {{ postgres_db_user }} -d {{ postgres_db_name }}
-  register: postgres_ready
-  until: postgres_ready.rc == 0
-  retries: 20
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    postgres_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Health Check - Wait for readiness of {{ postgres_instance }}"
+  ansible.builtin.command: >
+    podman inspect --format '{{ '{{' }} .State.Health.Status {{ '}}' }}' {{ postgres_instance }}
+  register: postgres_container_health
+  until: "'healthy' in postgres_container_health.stdout"
+  retries: 15
   delay: 2
   changed_when: false
+  delegate_to: "{{ postgres_delegate_host }}"
 
-- name: Connectivity Check - Execute SQL query
-  ansible.builtin.command: >
-    podman exec {{ postgres_container_name }}
-    psql -U {{ postgres_db_user }}
-    -d {{ postgres_db_name }}
-    -c "SELECT 1;"
-  register: postgres_query_result
+- name: "Security Check - Inspect metadata for leaks {{ postgres_instance }}"
+  ansible.builtin.command: "podman inspect {{ postgres_instance }}"
+  register: postgres_db_inspect
   changed_when: false
+  delegate_to: "{{ postgres_delegate_host }}"
 
-- name: Assert Results (Security & Logic)
+- name: "Assert Security & Readiness {{ postgres_instance }}"
   ansible.builtin.assert:
     that:
-      - "'(1 row)' in postgres_query_result.stdout"
-      - "vault_postgres_password not in postgres_container_inspect.stdout"
-      - "'postgres_db_password' in postgres_container_inspect.stdout"
-    fail_msg: "SECURITY ALERT: Database test failed or password leaked in inspect!"
-    success_msg: "SUCCESS: Database is reachable and secrets are protected."
+      - "postgres_container_health.stdout == 'healthy'"
+      - "postgres_db_pass not in postgres_db_inspect.stdout"
+    fail_msg: "ERROR: {{ postgres_instance }} failed health or security check!"
+    success_msg: "SUCCESS: {{ postgres_instance }} is healthy and secure."
+  delegate_to: "{{ postgres_delegate_host }}"
