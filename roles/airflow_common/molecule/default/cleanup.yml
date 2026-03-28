@@ -1,0 +1,41 @@
+---
+
+- name: Cleanup for Molecule Airflow Tests
+  hosts: all:!localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Clean Airflow Common"
+      ansible.builtin.include_role:
+        name: airflow_common
+        tasks_from: clean.yml
+      vars:
+        airflow_common_config: "{{ test_airflow_config }}"
+        airflow_common_admin_pass_secret_name: "{{ test_airflow_admin_pass_secret_name }}"
+        airflow_common_network: "{{ test_airflow_network }}"
+
+    - name: "Clean Postgres"
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: clean.yml
+      vars:
+        postgres_instance: "{{ test_postgres_instance }}"
+        postgres_volume: "{{ test_postgres_volume }}"
+        postgres_network: "{{ test_postgres_network }}"
+        postgres_secret_name: "{{ test_postgres_secret_name }}"
+        postgres_purge_data: "{{ test_postgres_purge_data }}"
+        postgres_purge_network: "{{ test_postgres_purge_network }}"
+
+    - name: "Clean RabbitMQ"
+      ansible.builtin.include_role:
+        name: rabbitmq
+        tasks_from: clean.yml
+      vars:
+        rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+        rabbitmq_volume: "{{ test_rabbitmq_volume }}"
+        rabbitmq_network: "{{ test_rabbitmq_network }}"
+        rabbitmq_secret_name: "{{ test_rabbitmq_secret_name }}"
+        rabbitmq_purge_data: "{{ test_rabbitmq_purge_data }}"
+        rabbitmq_purge_network: "{{ test_rabbitmq_purge_network }}"

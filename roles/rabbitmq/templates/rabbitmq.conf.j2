@@ -1,11 +1,25 @@
-# Core credentials
-default_user = {{ rabbitmq_user | default('mq_admin') }}
-default_pass = {{ vault_rabbitmq_password }}
+# ==============================================================================
+# RABBITMQ STANDALONE CONFIGURATION
+# ==============================================================================
 
-# Fix deprecation
+# Core credentials
+# Password is safe here because this file is a Podman Secret
+default_user = {{ rabbitmq_user }}
+default_pass = {{ rabbitmq_pass }}
+
+# Management Settings
+management.tcp.port = 15672
+
+# Performance & Compatibility
+# Fix for some monitoring tools requiring older metrics collection
 deprecated_features.permit.management_metrics_collection = true
 
-# Logging
+# Resource Limits (Safe defaults for local dev)
+vm_memory_high_watermark.relative = 0.4
+disk_free_limit.absolute = 50MB
+
+# Logging Configuration
+# Send logs to console only to keep host storage clean (Podman handles logs)
 log.file = false
 log.console = true
 log.console.level = info

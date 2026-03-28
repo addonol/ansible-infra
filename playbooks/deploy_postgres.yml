@@ -1,23 +1,26 @@
 ---
-- name: Deployment - Postgres Role
+
+- name: Deploy a Standalone Postgres Instance
   hosts: all
   gather_facts: false
 
   tasks:
-    - name: Postgres Deployment Phase
+    - name: "Orchestrating Standalone Database"
       block:
-        - name: Deploy Role
+        - name: Run Postgres Role
           ansible.builtin.include_role:
             name: postgres
             tasks_from: main.yml
 
-        - name: Verify Postgres
+        - name: Verify Health and Security
           ansible.builtin.include_role:
             name: postgres
             tasks_from: verify.yml
 
       rescue:
-        - name: 🚨 FAILURE DETECTED - Purging Resources
+        - name: 🚨 Cleanup on Failure
           ansible.builtin.include_role:
             name: postgres
             tasks_from: clean.yml
+          vars:
+            postgres_purge_data: false

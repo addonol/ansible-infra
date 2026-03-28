@@ -1,0 +1,48 @@
+---
+
+- name: Set service facts and mappings
+  ansible.builtin.set_fact:
+    airflow_services_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+    airflow_services_container_name: "airflow_{{ airflow_services_name }}_{{ inventory_hostname | default('prod') }}"
+    airflow_services_config: "{{ airflow_config | default('airflow_config') }}"
+
+    airflow_services_cmd_map:
+      webserver: "api-server"
+      worker: "celery worker"
+      scheduler: "scheduler"
+      dag-processor: "dag-processor"
+      triggerer: "triggerer"
+
+- name: "Ensure Airflow host directories exist (Rootless)"
+  ansible.builtin.file:
+    path: "{{ airflow_dir_item }}"
+    state: directory
+    mode: '0775'
+  loop:
+    - "{{ airflow_common_dags_folder }}"
+    - "{{ airflow_common_logs_folder }}"
+  loop_control:
+    loop_var: airflow_dir_item
+  delegate_to: "{{ airflow_services_delegate_host }}"
+
+- name: "Launch Airflow 3 Service: {{ airflow_services_name }}"
+  containers.podman.podman_container:
+    name: "{{ airflow_services_container_name }}"
+    image: "{{ airflow_common_image }}"
+    state: started
+    recreate: true
+    restart_policy: always
+    network: "{{ airflow_common_network }}"
+    command: "{{ airflow_services_cmd_map[airflow_services_name] }}"
+    secrets:
+      - "{{ airflow_services_config }}"
+    env:
+      AIRFLOW_CONFIG: "/run/secrets/{{ airflow_services_config }}"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "{{ airflow_common_execution_api_url }}"
+    userns: keep-id
+    user: "0"
+    volumes:
+      - "{{ airflow_common_dags_folder }}:/opt/airflow/dags:Z"
+      - "{{ airflow_common_logs_folder }}:/opt/airflow/logs:Z"
+    ports: "{{ (airflow_services_name == 'webserver') | ternary(['8080:8080'], []) }}"
+  delegate_to: "{{ airflow_services_delegate_host }}"

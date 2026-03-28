@@ -1,9 +1,15 @@
 ---
-vault_rabbitmq_password: "testpassword123"
-rabbitmq_container_name: "rabbitmq_broker_molecule_{{ inventory_hostname }}"
-rabbitmq_network: "rabbitmq_net_{{ inventory_hostname }}"
-rabbitmq_user: "mq_admin"
-rabbitmq_secret_pass_name: "rabbitmq_password_{{ inventory_hostname }}"
-rabbitmq_management_port: "{{ 5672 + (ansible_play_hosts.index(inventory_hostname)) }}"
-rabbitmq_ui_port: "{{ 15672 + (ansible_play_hosts.index(inventory_hostname)) }}"
-rabbitmq_volume_name: "rabbitmq_data_{{ inventory_hostname }}"
+
+idx: "{{ ansible_play_hosts_all.index(inventory_hostname) }}"
+
+test_rabbitmq_image: "docker.io/library/rabbitmq:3.13-management-alpine"
+test_rabbitmq_instance: "rabbitmq_molecule_{{ inventory_hostname }}"
+test_rabbitmq_volume: "rabbitmq_molecule_data_{{ inventory_hostname }}"
+test_rabbitmq_network: "infra_net_{{ inventory_hostname }}"
+test_rabbitmq_secret_name: "rabbitmq_molecule_{{ inventory_hostname }}_password"
+test_rabbitmq_user: "molecule_admin"
+test_rabbitmq_pass: "testpassword123"
+test_rabbitmq_management_port:  "{{ 5672 + idx | int }}"
+test_rabbitmq_ui_port: "{{ 15672 + idx | int }}"
+test_rabbitmq_purge_data: true
+test_rabbitmq_purge_network: true

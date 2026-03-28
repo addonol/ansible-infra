@@ -1,0 +1,24 @@
+---
+
+- name: Verify Airflow Common
+  hosts: all:!localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Functional Check - Check if Admin user exists in DB"
+      ansible.builtin.command: >
+        podman exec {{ test_airflow_postgres_instance }}
+        psql -U {{ test_postgres_db_user }}
+        -d {{ test_postgres_db_name }}
+        -t -c "SELECT username FROM ab_user WHERE username = '{{ test_airflow_admin_user }}';"
+      register: airflow_common_db_check
+      delegate_to: localhost
+      changed_when: false
+
+    - name: "Assert Admin user presence"
+      ansible.builtin.assert:
+        that:
+          - "test_airflow_admin_user in airflow_common_db_check.stdout"
+        fail_msg: "L'utilisateur {{ test_airflow_admin_user }} est absent de la base !"

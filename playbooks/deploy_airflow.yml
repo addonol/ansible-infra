@@ -1,0 +1,69 @@
+---
+
+- name: Deployment - Airflow 3 Celery Full Stack
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Orchestrate Airflow Stack
+      block:
+        - name: "Step 1: Deploy Standalone Postgres"
+          ansible.builtin.include_role:
+            name: postgres
+          vars:
+            postgres_instance: "{{ airflow_postgres_instance }}"
+            postgres_db_name: "{{ airflow_postgres_db_name }}"
+            postgres_db_user: "{{ airflow_postgres_db_user }}"
+            postgres_db_pass: "{{ airflow_postgres_db_pass }}"
+            postgres_volume: "{{ airflow_postgres_volume }}"
+            postgres_network: "{{ airflow_common_network }}"
+
+        - name: "Step 2: Deploy Standalone RabbitMQ"
+          ansible.builtin.include_role:
+            name: rabbitmq
+          vars:
+            rabbitmq_instance: "{{ airflow_rabbitmq_instance }}"
+            rabbitmq_user: "{{ airflow_rabbitmq_user }}"
+            rabbitmq_pass: "{{ airflow_rabbitmq_pass }}"
+            rabbitmq_volume: "{{ airflow_rabbitmq_volume }}"
+            rabbitmq_network: "{{ airflow_common_network }}"
+
+        - name: "Step 3: Initialize Airflow 3 Core"
+          ansible.builtin.include_role:
+            name: airflow_common
+
+        - name: "Step 4: Launch Airflow 3 Services"
+          ansible.builtin.include_role:
+            name: airflow_services
+          vars:
+            airflow_services_name: "{{ item }}"
+          loop:
+            - webserver
+            - scheduler
+            - dag-processor
+            - triggerer
+            - worker
+
+      rescue:
+        - name: "🚨 DEPLOYMENT FAILED - Triggering Emergency Clean"
+          ansible.builtin.include_role:
+            name: "{{ fail_item.role }}"
+            tasks_from: clean.yml
+          vars:
+            airflow_services_name: "{{ fail_item.service | default('') }}"
+            postgres_instance: "{{ airflow_postgres_instance }}"
+            postgres_purge_date: true
+            rabbitmq_instance: "{{ airflow_rabbitmq_instance }}"
+            rabbitmq_purge_data: true
+          loop:
+            - { role: 'airflow_services', service: 'worker' }
+            - { role: 'airflow_services', service: 'triggerer' }
+            - { role: 'airflow_services', service: 'dag-processor' }
+            - { role: 'airflow_services', service: 'scheduler' }
+            - { role: 'airflow_services', service: 'webserver' }
+            - { role: 'airflow_common' }
+            - { role: 'rabbitmq' }
+            - { role: 'postgres' }
+          loop_control:
+            loop_var: fail_item
+            label: "Cleaning {{ fail_item.role }} {{ fail_item.service | default('') }}"

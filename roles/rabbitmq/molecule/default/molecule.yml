@@ -1,4 +1,5 @@
 ---
+
 dependency:
   name: galaxy
   options:
@@ -8,22 +9,22 @@ driver:
   name: podman
 
 platforms:
-  - name: instance_debian
+  - name: molecule-debian12
     image: docker.io/geerlingguy/docker-debian12-ansible:latest
     pre_build_image: true
     delete_volumes: true
 
-  - name: instance_ubuntu
+  - name: molecule-ubuntu2204
     image: docker.io/geerlingguy/docker-ubuntu2204-ansible:latest
     pre_build_image: true
     delete_volumes: true
 
-  - name: instance_fedora
+  - name: molecule-fedora39
     image: docker.io/geerlingguy/docker-fedora39-ansible:latest
     pre_build_image: true
     delete_volumes: true
 
-  - name: instance_rocky
+  - name: molecule-rocky9
     image: docker.io/geerlingguy/docker-rockylinux9-ansible:latest
     pre_build_image: true
     delete_volumes: true
@@ -41,7 +42,6 @@ provisioner:
       deprecation_warnings: false
       action_warnings: false
       verbosity: 0
-
     ssh_connection:
       pipelining: true
 

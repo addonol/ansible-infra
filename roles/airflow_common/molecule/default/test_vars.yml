@@ -1,0 +1,50 @@
+---
+
+idx: "{{ ansible_play_hosts_all.index(inventory_hostname) }}"
+
+test_shared_network: "infra_net_{{ inventory_hostname }}"
+
+test_postgres_image: "docker.io/library/postgres:16-alpine"
+test_postgres_instance: "postgres_molecule_{{ inventory_hostname }}"
+test_postgres_volume: "postgres_molecule_data_{{ inventory_hostname }}"
+test_postgres_network: "{{ test_shared_network }}"
+test_postgres_secret_name: "postgres_molecule_{{ inventory_hostname }}_password"
+test_postgres_port: "{{ 5432 + idx | int }}"
+test_postgres_purge_data: true
+test_postgres_purge_network: false
+test_postgres_db_name: "molecule_test_db"
+test_postgres_db_user: "molecule_test_user"
+test_postgres_db_pass: "molecule_test_password"
+
+test_rabbitmq_image: "docker.io/library/rabbitmq:3.13-management-alpine"
+test_rabbitmq_instance: "rabbitmq_molecule_{{ inventory_hostname }}"
+test_rabbitmq_volume: "rabbitmq_molecule_data_{{ inventory_hostname }}"
+test_rabbitmq_network: "{{ test_shared_network }}"
+test_rabbitmq_secret_name: "rabbitmq_molecule_{{ inventory_hostname }}_password"
+test_rabbitmq_user: "molecule_admin"
+test_rabbitmq_pass: "testpassword123"
+test_rabbitmq_management_port:  "{{ 5672 + idx | int }}"
+test_rabbitmq_ui_port: "{{ 15672 + idx | int }}"
+test_rabbitmq_purge_data: true
+test_rabbitmq_purge_network: true
+
+test_airflow_image: "docker.io/apache/airflow:3.1.7-python3.12"
+test_airflow_config: "airflow_config_{{ inventory_hostname }}"
+test_airflow_admin_pass_secret_name: "airflow_pass_{{ inventory_hostname }}"
+test_airflow_fernet_key: "molecule_default_fernet_key_32_chars_=="
+test_airflow_jwt_secret: "a_very_long_random_string_for_testing_32_chars_min"
+test_airflow_webserver_secret_key: "molecule_test_secret_key"
+test_airflow_admin_user: "admin_test"
+test_airflow_admin_pass: "password_test"
+test_airflow_admin_email: "test@example.com"
+test_airflow_network: "{{ test_shared_network }}"
+test_airflow_instance: "airflow_molecule_{{ inventory_hostname }}"
+test_airflow_postgres_instance: "{{ test_postgres_instance }}"
+test_airflow_postgres_db_pass: "{{ test_postgres_db_pass }}"
+test_airflow_postgres_db_name: "{{ test_postgres_db_name }}"
+test_airflow_postgres_db_user: "{{ test_postgres_db_user }}"
+test_airflow_rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+test_airflow_rabbitmq_user: "{{ test_rabbitmq_user }}"
+test_airflow_rabbitmq_pass: "{{ test_rabbitmq_pass }}"
+test_airflow_rabbitmq_management_port: "{{ test_rabbitmq_management_port }}"
+test_airflow_purge_network: false

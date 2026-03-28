@@ -1,7 +1,11 @@
 ---
 galaxy_info:
   author: addonol
-  description: Persistent PostgreSQL database container for Airflow metadata.
+  description: >
+    A standalone and highly dynamic PostgreSQL containerized role.
+    It features rootless Podman deployment, built-in healthchecks,
+    and security auditing to prevent secret leaks in container metadata.
+    Designed for full isolation and modular infrastructure.
   company: none
   license: MIT
   min_ansible_version: "2.12"
@@ -10,5 +14,8 @@ galaxy_info:
     - sql
     - database
     - podman
-    - storage
+    - rootless
+    - infrastructure
+    - security
+
 dependencies: []

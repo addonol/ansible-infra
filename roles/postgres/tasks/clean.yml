@@ -1,30 +1,38 @@
 ---
-- name: Remove RabbitMQ container
+
+- name: Set cleanup facts
+  ansible.builtin.set_fact:
+    postgres_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Remove Postgres container: {{ postgres_instance }}"
   containers.podman.podman_container:
-    name: "{{ rabbitmq_container_name }}"
+    name: "{{ postgres_instance }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ postgres_delegate_host }}"
 
-- name: Remove RabbitMQ secret
+- name: "Remove Postgres secret: {{ postgres_secret_name }}"
   containers.podman.podman_secret:
-    name: "{{ rabbitmq_secret_pass_name }}"
+    name: "{{ postgres_secret_name }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ postgres_delegate_host }}"
 
-- name: Remove RabbitMQ volume
+- name: "Remove Postgres volume: {{ postgres_volume }}"
   containers.podman.podman_volume:
-    name: "{{ rabbitmq_volume_name }}"
+    name: "{{ postgres_volume }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ postgres_delegate_host }}"
+  when: postgres_purge_data | default(false) | bool
 
-- name: Remove RabbitMQ network
+- name: "Remove network: {{ postgres_network }}"
   containers.podman.podman_network:
-    name: "{{ rabbitmq_network }}"
+    name: "{{ postgres_network }}"
     state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  delegate_to: "{{ postgres_delegate_host }}"
+  when: postgres_purge_network | default(false) | bool
 
-- name: Remove temporary configuration file from host
-  ansible.builtin.file:
-    path: "/tmp/rabbitmq_{{ rabbitmq_container_name }}.conf"
-    state: absent
-  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+- name: "Status: Cleanup Summary for {{ postgres_instance }}"
+  ansible.builtin.debug:
+    msg:
+      - "CLEANUP COMPLETE: {{ postgres_instance }}"
+      - "Volume purged: {{ postgres_purge_data | default(false) | bool }}"
+      - "Network removed: {{ postgres_purge_network | default(false) | bool }}"

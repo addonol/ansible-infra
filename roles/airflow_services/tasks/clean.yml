@@ -1,0 +1,12 @@
+---
+
+- name: "Remove Airflow Service: {{ airflow_services_name }}"
+  containers.podman.podman_container:
+    name: "airflow_{{ airflow_services_name }}_{{ inventory_hostname | default('prod') }}"
+    state: absent
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+  register: airflow_services_rm_res
+  failed_when:
+    - "airflow_services_rm_res.failed"
+    - "'no such container' not in airflow_services_rm_res.msg | lower"
+    - "'could not find' not in airflow_services_rm_res.msg | lower"

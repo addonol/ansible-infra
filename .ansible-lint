@@ -2,4 +2,5 @@ exclude_paths:
     - .venv/
     - group_vars/all/vault.yml
     - "**/molecule/*/test_vars.yml"
+    - "**/molecule/*/roles/*"
     - dags/

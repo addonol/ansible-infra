@@ -1,0 +1,49 @@
+---
+
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    airflow_common_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Ensure network exists: {{ airflow_common_network }}"
+  containers.podman.podman_network:
+    name: "{{ airflow_common_network }}"
+    state: present
+  delegate_to: "{{ airflow_common_delegate_host }}"
+
+- name: Create Podman secret from template
+  containers.podman.podman_secret:
+    name: "{{ airflow_common_config }}"
+    data: "{{ lookup('template', 'airflow.cfg.j2') }}"
+    state: present
+  no_log: true
+  delegate_to: "{{ airflow_common_delegate_host }}"
+
+- name: Run Database and Admin Initialization
+  containers.podman.podman_container:
+    name: airflow_init_{{ inventory_hostname }}
+    image: "{{ airflow_common_image }}"
+    network: "{{ airflow_common_network }}"
+    command:
+      - "bash"
+      - "-c"
+      - >-
+        airflow db migrate &&
+        airflow users create
+        --username {{ airflow_common_admin_user }}
+        --password {{ airflow_common_admin_pass }}
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email {{ airflow_common_admin_email }}
+    rm: true
+    detach: false
+    secrets: ["{{ airflow_common_config }}"]
+    env:
+      AIRFLOW_CONFIG: "/run/secrets/{{ airflow_common_config }}"
+  register: airflow_common_init_res
+  failed_when:
+    - "airflow_common_init_res.msg is defined and 'exited with code' in airflow_common_init_res.msg and 'exited with code 0' not in airflow_common_init_res.msg"
+    - "'already exists' not in (airflow_common_init_res.stdout | default('') + airflow_common_init_res.stderr | default(''))"
+  changed_when:
+    - "'User \"' + airflow_common_admin_user + '\" created' in (airflow_common_init_res.stdout | default('') + airflow_common_init_res.stderr | default(''))"
+  delegate_to: "{{ airflow_common_delegate_host }}"

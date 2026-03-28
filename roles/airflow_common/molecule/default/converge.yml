@@ -1,0 +1,62 @@
+---
+
+- name: Converge Airflow Common
+  hosts: all:!localhost
+  gather_facts: true
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Dependency: Deploy Postgres"
+      ansible.builtin.include_role:
+        name: postgres
+      vars:
+        postgres_image: "{{ test_postgres_image }}"
+        postgres_instance: "{{ test_postgres_instance }}"
+        postgres_volume: "{{ test_postgres_volume }}"
+        postgres_secret_name: "{{ test_postgres_secret_name }}"
+        postgres_network: "{{ test_postgres_network }}"
+        postgres_port: "{{ test_postgres_port }}"
+        postgres_db_name: "{{ test_postgres_db_name }}"
+        postgres_db_user: "{{ test_postgres_db_user }}"
+        postgres_db_pass: "{{ test_postgres_db_pass }}"
+
+    - name: "Dependency: Deploy RabbitMQ"
+      ansible.builtin.include_role:
+        name: rabbitmq
+      vars:
+        rabbitmq_image: "{{ test_rabbitmq_image }}"
+        rabbitmq_instance: "{{ test_rabbitmq_instance }}"
+        rabbitmq_volume: "{{ test_rabbitmq_volume }}"
+        rabbitmq_secret_name: "{{ test_rabbitmq_secret_name }}"
+        rabbitmq_network: "{{ test_rabbitmq_network }}"
+        rabbitmq_management_port: "{{ test_rabbitmq_management_port }}"
+        rabbitmq_ui_port: "{{ test_rabbitmq_ui_port }}"
+        rabbitmq_purge_data_enabled: "{{ test_rabbitmq_purge_data_enabled }}"
+        rabbitmq_pass: "{{ test_rabbitmq_pass }}"
+        rabbitmq_user: "{{ test_rabbitmq_user }}"
+
+    - name: "Run Database and Admin Initialization"
+      ansible.builtin.include_role:
+        name: airflow_common
+      vars:
+        airflow_common_image: "{{ test_airflow_image }}"
+        airflow_common_config: "{{ test_airflow_config }}"
+        airflow_common_admin_pass_secret_name: "airflow_pass_{{ inventory_hostname }}"
+        airflow_common_fernet_key: "{{ test_airflow_fernet_key }}"
+        airflow_common_webserver_secret_key: "{{ test_airflow_webserver_secret_key }}"
+        airflow_common_jwt_secret: "{{ test_airflow_jwt_secret }}"
+        airflow_common_admin_user: "{{ test_airflow_admin_user }}"
+        airflow_common_admin_pass: "{{ test_airflow_admin_pass }}"
+        airflow_common_admin_email: "{{ test_airflow_admin_email }}"
+        airflow_common_instance: "{{ test_airflow_instance }}"
+        airflow_common_postgres_instance: "{{ test_airflow_postgres_instance }}"
+        airflow_common_postgres_port: "{{ test_postgres_port }}"
+        airflow_common_postgres_db_pass: "{{ test_airflow_postgres_db_pass }}"
+        airflow_common_postgres_db_name: "{{ test_airflow_postgres_db_name }}"
+        airflow_common_postgres_db_user: "{{ test_airflow_postgres_db_user }}"
+        airflow_common_rabbitmq_instance: "{{ test_airflow_rabbitmq_instance }}"
+        airflow_common_rabbitmq_user: "{{ test_airflow_rabbitmq_user }}"
+        airflow_common_rabbitmq_pass: "{{ test_airflow_rabbitmq_pass }}"
+        airflow_common_rabbitmq_management_port: "{{ test_airflow_rabbitmq_management_port }}"
+        airflow_common_network: "{{ test_airflow_network }}"

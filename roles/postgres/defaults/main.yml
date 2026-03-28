@@ -1,9 +1,12 @@
 ---
 postgres_image: "docker.io/library/postgres:16-alpine"
-postgres_secret_db_password_name: "postgres_db_password"
+postgres_instance: "standalone_postgres"
+postgres_volume: "postgres_data"
+postgres_network: "postgres_network"
+postgres_secret_name: "postgres_password"
+postgres_port: 5432
 postgres_db_name: "postgres_db"
 postgres_db_user: "postgres_user"
-postgres_container_name: "postgres"
-postgres_network: "postgres_net"
-postgres_port_number: 5432
-postgres_volume_name: "postgres_data"
+postgres_db_pass: "changeme"
+postgres_purge_data: false
+postgres_purge_network: false

@@ -1,18 +1,20 @@
 ---
-- name: Final Cleanup
-  hosts: localhost
-  connection: local
+
+- name: Cleanup for Molecule Postgres Tests
+  hosts: all:!localhost
   gather_facts: false
+  vars_files:
+    - test_vars.yml
 
   tasks:
-    - name: Purge named resources (containers, networks)
+    - name: "Purge Molecule resources for each tested OS"
       ansible.builtin.include_role:
         name: postgres
         tasks_from: clean.yml
       vars:
-        postgres_container_name: "postgres_molecule_{{ item }}"
-        postgres_network: "postgres_net_{{ item }}"
-        postgres_secret_db_password_name: "postgres_db_password_{{ item }}"
-        postgres_volume_name: "postgres_data_{{ item }}"
-      loop: "{{ groups['all'] | default(['localhost']) }}"
-      ignore_errors: true # noqa ignore-errors
+        postgres_instance: "{{ test_postgres_instance }}"
+        postgres_secret_name: "{{ test_postgres_secret_name }}"
+        postgres_volume: "{{ test_postgres_volume }}"
+        postgres_network: "{{ test_postgres_network }}"
+        postgres_clean_network: "{{ test_postgres_purge_network }}"
+        postgres_purge_data: "{{ test_postgres_purge_data }}"

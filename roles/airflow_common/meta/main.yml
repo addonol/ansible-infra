@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: addonol
+  description: >
+    Airflow 3 core configuration and database orchestration.
+    This role handles database migrations (alembic), secure admin user
+    provisioning via Podman Secrets, and centralizes configuration
+    for the entire Celery stack without LDAP dependencies.
+  company: none
+  license: MIT
+  min_ansible_version: "2.12"
+  galaxy_tags:
+    - airflow
+    - airflow3
+    - workflow
+    - orchestration
+    - podman
+    - rootless
+    - infrastructure
+    - database
+
+# This role prepares the shared environment (secrets, init-db).
+# Individual services (webserver, scheduler, worker) rely on its output.
+dependencies: []

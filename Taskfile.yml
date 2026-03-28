@@ -95,86 +95,93 @@ tasks:
   # ----------------------------------------------------------------------------
 
   airflow:deploy:
-    desc: "Deploy full Airflow Celery stack"
+    desc: "Deploy full Airflow 3 Celery stack"
     deps: [check-vault]
+    silent: true
     cmds:
-      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/test_airflow_full_stack.yml {{.VAULT_OPTS}}"
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_airflow.yml {{.VAULT_OPTS}}
 
   airflow:purge:
-    desc: "💣 Purge Airflow stack (Containers, Secrets, Volumes)"
+    desc: "Purge all Airflow resources"
     deps: [check-vault]
+    silent: true
+    vars:
+      airflow_common_purge_data: true
+      airflow_common_purge_network: true
     cmds:
-      - "{{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_airflow_stack.yml"
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_airflow.yml
+        -e "airflow_common_purge_data={{.airflow_common_purge_data}}"
+        -e "airflow_common_purge_network={{.airflow_common_purge_network}}"
+
+  airflow:test:
+    desc: "Run isolated Molecule unit tests for Airflow Common role"
+    dir: roles/airflow_common
+    silent: true
+    cmds:
+      - uv run molecule destroy
+      - uv run molecule test
+      - podman volume prune -f
+      - podman network prune -f
 
   # ----------------------------------------------------------------------------
   # SECTION: POSTGRES
   # ----------------------------------------------------------------------------
 
   postgres:deploy:
-    desc: "Deploy standalone PostgreSQL instance"
+    desc: "Deploy a standalone PostgreSQL instance with explicit parameters"
     deps: [check-vault]
     silent: true
     cmds:
       - >
         {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_postgres.yml
-        -e "postgres_db_user=my_db_user"
-        -e "postgres_db_name=my_db_name"
-        -e "postgres_volume_name=postgres_data"
-        -e "postgres_network=postgres_net"
-        -e "postgres_container_name=postgres_db"
-        -e "postgres_port_number=5432"
-
-  postgres:shell:
-    desc: "Open interactive psql shell in container"
-    cmds:
-      - podman exec -it airflow_db psql -U airflow_user -d airflow
 
   postgres:purge:
-    desc: "Purge all PostgreSQL resources"
+    desc: "Purge PostgreSQL resources for a specific instance"
     silent: true
+    vars:
+      postgres_purge_data: true
+      postgres_purge_network: true
     cmds:
       - >
         {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_postgres.yml
-        -e "postgres_volume_name=postgres_data"
-        -e "postgres_network=postgres_net"
+        -e "postgres_purge_data={{.postgres_purge_data}}"
+        -e "postgres_purge_network={{.postgres_purge_network}}"
 
   postgres:test:
-    desc: "Run Molecule unit tests for Postgres (Multi-OS)"
+    desc: "Run isolated Molecule unit tests for Postgres role"
     dir: roles/postgres
     silent: true
     cmds:
-      - uv run molecule reset
+      - uv run molecule destroy
       - uv run molecule test
       - podman volume prune -f
+      - podman network prune -f
 
   # ----------------------------------------------------------------------------
   # SECTION: RABBITMQ
   # ----------------------------------------------------------------------------
 
   rabbitmq:deploy:
-    desc: "Deploy standalone RabbitMQ broker"
+    desc: "Deploy a standalone RabbitMQ broker with explicit parameters"
     deps: [check-vault]
     silent: true
     cmds:
       - >
         {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_rabbitmq.yml
-        -e "rabbitmq_container_name=rabbitmq_broker"
-        -e "rabbitmq_image=docker.io/library/rabbitmq:3.13-management-alpine"
-        -e "rabbitmq_network=rabbitmq_net"
-        -e "rabbitmq_user=mq_admin"
-        -e "rabbitmq_secret_pass_name=rabbitmq_password"
-        -e "rabbitmq_management_port=5672"
-        -e "rabbitmq_ui_port=15672"
-        -e "rabbitmq_volume_name=rabbitmq_data"
 
   rabbitmq:purge:
-    desc: "Purge all RabbitMQ broker resources"
+    desc: "Purge RabbitMQ resources for a specific instance"
     silent: true
+    vars:
+      rabbitmq_purge_data: true
+      rabbitmq_purge_network: true
     cmds:
       - >
         {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_rabbitmq.yml
-        -e "postgres_volume_name=rabbitmq_data"
-        -e "postgres_network=rabbitmq_net"
+        -e "rabbitmq_purge_data={{.rabbitmq_purge_data}}"
+        -e "rabbitmq_purge_network={{.rabbitmq_purge_network}}"
 
   rabbitmq:test:
     desc: "Run Molecule unit tests for RabbitMQ broker (Multi-OS)"
@@ -184,6 +191,7 @@ tasks:
       - uv run molecule reset
       - uv run molecule test
       - podman volume prune -f
+      - podman network prune -f
 
   # ----------------------------------------------------------------------------
   # SECTION: TEST
@@ -191,6 +199,7 @@ tasks:
 
   test:lint:
     desc: "Run pre-commit quality checks"
+    silent: true
     cmds:
       - uv run pre-commit run --all-files
 
@@ -200,19 +209,21 @@ tasks:
 
   infra:podman:stats:
     desc: "Show Podman resource usage (RAM/CPU)"
+    silent: true
     cmds:
       - podman stats --no-stream
 
   infra:podman:clean:
     desc: "Remove ALL orphaned volumes and secrets (System Prune)"
+    silent: true
     cmds:
       - podman volume prune -f
       - podman secret rm $(podman secret ls -q) || true
-    silent: true
 
   infra:vault:edit:
     desc: "Edit encrypted secrets with Ansible Vault"
     deps: [check-vault]
+    silent: true
     cmds:
       - uv run ansible-vault edit group_vars/all/vault.yml {{.VAULT_OPTS}}
 
