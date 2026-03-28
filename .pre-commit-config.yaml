@@ -23,7 +23,6 @@ repos:
         files: \.(yaml|yml)$
         exclude: dags/
         language_version: python3.12
-        args: ["--offline"]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
