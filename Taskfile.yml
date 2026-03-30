@@ -101,6 +101,7 @@ tasks:
     cmds:
       - >
         {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_airflow.yml {{.VAULT_OPTS}}
+        -e "airflow_use_fastapi=true"
 
   airflow:purge:
     desc: "Purge all Airflow resources"

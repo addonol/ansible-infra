@@ -28,7 +28,7 @@ airflow_common_executor: "CeleryExecutor"
 airflow_common_load_examples: "false"
 airflow_common_execution_api_url: "http://airflow_webserver_{{ inventory_hostname | default('prod') }}:8080/execution/"
 airflow_common_network: "infra_net"
-airflow_common_image: "docker.io/apache/airflow:3.1.7-python3.12"
+airflow_common_image: "docker.io/apache/airflow:3.1.8-python3.12"
 airflow_common_webserver_port: 8080
 airflow_common_purge_network: false
 airflow_common_purge_data: false

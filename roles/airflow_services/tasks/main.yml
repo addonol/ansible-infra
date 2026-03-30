@@ -25,6 +25,14 @@
     loop_var: airflow_dir_item
   delegate_to: "{{ airflow_services_delegate_host }}"
 
+- name: Create Simple Auth Manager Passwords Secret
+  containers.podman.podman_secret:
+    name: airflow_simple_passwords_json
+    data: "{{ lookup('template', 'simple_auth_manager_passwords.json.j2') }}"
+    state: present
+  when: airflow_use_fastapi | bool
+  delegate_to: "{{ airflow_services_delegate_host }}"
+
 - name: "Launch Airflow 3 Service: {{ airflow_services_name }}"
   containers.podman.podman_container:
     name: "{{ airflow_services_container_name }}"
@@ -36,9 +44,11 @@
     command: "{{ airflow_services_cmd_map[airflow_services_name] }}"
     secrets:
       - "{{ airflow_services_config }}"
+      - "{{ (airflow_use_fastapi | bool) | ternary('airflow_simple_passwords_json', omit) }}"
     env:
       AIRFLOW_CONFIG: "/run/secrets/{{ airflow_services_config }}"
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "{{ airflow_common_execution_api_url }}"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "{{ (airflow_use_fastapi | bool) | ternary('/run/secrets/airflow_simple_passwords_json', omit) }}"
     userns: keep-id
     user: "0"
     volumes:

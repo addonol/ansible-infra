@@ -43,6 +43,24 @@ This Ansible role manages the core configuration and database initialization for
 | `airflow_common_webserver_secret_key` | `vault.yml` | Secret key for Flask/FastAPI session and JWT signing. |
 
 
+## 🚀 Airflow 3 Hybrid Architecture
+
+This repository supports both the legacy **Flask** (FAB) and the modern **FastAPI** architectures. You can toggle between them using the `airflow_use_fastapi` variable.
+
+### Authentication Modes
+
+
+| Mode | Variable | Auth Manager | Backend |
+| :--- | :--- | :--- | :--- |
+| **Legacy (Flask)** | `airflow_use_fastapi: false` | `FabAuthManager` | Flask-AppBuilder (DB-based) |
+| **Modern (FastAPI)** | `airflow_use_fastapi: true` | `SimpleAuthManager` | FastAPI Native (JSON-based) |
+
+### Configuration Details
+
+- **FastAPI Mode**: In this mode, users are defined via a secure JSON secret. The legacy `airflow users create` command is skipped as authentication is handled statelessly by the API Server.
+- **Security**: Passwords and JWT secrets are managed via **Podman Secrets** to prevent exposure in `podman inspect` logs.
+- **JWT Secret**: Ensure your `airflow_common_jwt_secret` is at least 64 characters long to avoid signature verification errors between the API Server and Workers.
+
 
 ## 🚀 Deployment Workflow
 

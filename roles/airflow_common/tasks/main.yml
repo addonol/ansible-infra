@@ -27,23 +27,33 @@
       - "bash"
       - "-c"
       - >-
-        airflow db migrate &&
-        airflow users create
+        airflow db migrate
+        {% if not (airflow_use_fastapi | default(false)) %}
+        && airflow users create
         --username {{ airflow_common_admin_user }}
         --password {{ airflow_common_admin_pass }}
         --firstname Admin
         --lastname User
         --role Admin
         --email {{ airflow_common_admin_email }}
+        {% endif %}
     rm: true
     detach: false
-    secrets: ["{{ airflow_common_config }}"]
+    secrets:
+      - "{{ airflow_common_config }}"
     env:
       AIRFLOW_CONFIG: "/run/secrets/{{ airflow_common_config }}"
   register: airflow_common_init_res
+  changed_when:
+    - >-
+      (not (airflow_use_fastapi | default(false) | bool) and 'created' in (airflow_common_init_res.stdout | default(''))) or
+      ((airflow_use_fastapi | default(false) | bool) and 'No migrations to apply' not in (airflow_common_init_res.stdout | default('')))
   failed_when:
     - "airflow_common_init_res.msg is defined and 'exited with code' in airflow_common_init_res.msg and 'exited with code 0' not in airflow_common_init_res.msg"
-    - "'already exists' not in (airflow_common_init_res.stdout | default('') + airflow_common_init_res.stderr | default(''))"
-  changed_when:
-    - "'User \"' + airflow_common_admin_user + '\" created' in (airflow_common_init_res.stdout | default('') + airflow_common_init_res.stderr | default(''))"
+    - >-
+      not (airflow_use_fastapi | default(false) | bool) and
+      'already exists' not in (
+        airflow_common_init_res.stdout | default('') +
+        airflow_common_init_res.stderr | default('')
+      )
   delegate_to: "{{ airflow_common_delegate_host }}"

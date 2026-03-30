@@ -3,8 +3,16 @@ executor = {{ airflow_common_executor }}
 dags_folder = /opt/airflow/dags
 load_examples = {{ airflow_common_load_examples }}
 fernet_key = {{ airflow_common_fernet_key }}
-auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
 internal_api_secret_key = {{ airflow_common_jwt_secret }}
+
+# Dynamic Auth Manager Selection
+{% if airflow_use_fastapi | default(false) %}
+auth_manager = airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+{% else %}
+auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+{% endif %}
+
+
 
 [database]
 {% set postgres_uri = "postgresql+psycopg2://" ~ airflow_common_postgres_db_user ~ ":" ~ (airflow_common_postgres_db_pass | urlencode) %}
@@ -15,11 +23,29 @@ sql_alchemy_conn = {{ postgres_uri }}@{{ airflow_common_postgres_instance }}:543
 broker_url = {{ rabbitmq_uri }}@{{ airflow_common_rabbitmq_instance }}:{{ airflow_common_rabbitmq_management_port }}//
 result_backend = db+postgresql://{{ airflow_common_postgres_db_user }}:{{ airflow_common_postgres_db_pass | urlencode }}@{{ airflow_common_postgres_instance }}:{{ airflow_common_postgres_port}}/{{ airflow_common_postgres_db_name }}
 
+
+
+# --- FastAPI Specific Configuration ---
+[api_fastapi]
+enabled = {{ airflow_use_fastapi | default(false) | lower }}
+
 [api_fastapi.auth.tokens]
 jwt_secret = {{ airflow_common_jwt_secret }}
 
+{% if airflow_use_fastapi | default(false) %}
+[simple_auth_manager]
+# In FastAPI "Simple" mode, admin is defined in the config, not in DB
+simple_auth_manager_users = {{ airflow_common_admin_user }}:admin
+{% endif %}
+
+
+# --- API & Webserver Configuration ---
 [api]
+{% if airflow_use_fastapi | default(false) %}
+auth_backends = airflow.api.auth.backend.session
+{% else %}
 auth_backends = airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth
+{% endif %}
 secret_key = {{ airflow_common_webserver_secret_key }}
 
 [api_auth]
