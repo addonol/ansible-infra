@@ -1,0 +1,26 @@
+---
+
+- name: Deployment - CAS Mock Authentication Server
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Orchestrating CAS Mock Instance
+      block:
+        - name: Execute Deployment
+          ansible.builtin.include_role:
+            name: cas_mock
+            tasks_from: main.yml
+
+        - name: Check Deployment
+          ansible.builtin.include_role:
+            name: cas_mock
+            tasks_from: verify.yml
+
+      rescue:
+        - name: "🚨 FAILURE DETECTED - Rolling back CAS Mock"
+          ansible.builtin.include_role:
+            name: cas_mock
+            tasks_from: clean.yml
+          vars:
+            cas_mock_purge_network: true

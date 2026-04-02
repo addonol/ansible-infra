@@ -1,0 +1,13 @@
+---
+- name: "Remove CAS Mock container: {{ cas_mock_instance }}"
+  containers.podman.podman_container:
+    name: "cas_mock_{{ inventory_hostname }}"
+    state: absent
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Remove CAS Mock network: {{ cas_mock_network }}"
+  containers.podman.podman_network:
+    name: "{{ cas_mock_network }}"
+    state: absent
+  when: cas_mock_purge_network | default(false) | bool
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"

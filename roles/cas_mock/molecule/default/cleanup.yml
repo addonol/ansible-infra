@@ -1,0 +1,21 @@
+---
+
+- name: Cleanup for Molecule CAS Mock Tests
+  hosts: all:!localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Purge Molecule resources for each tested OS"
+      ansible.builtin.include_role:
+        name: cas_mock
+        tasks_from: clean.yml
+      vars:
+        cas_mock_image: "{{ test_cas_mock_image }}"
+        cas_mock_user: "{{ test_cas_mock_user }}"
+        cas_mock_pass: "{{ test_cas_mock_pass }}"
+        cas_mock_port_host: "{{ test_cas_mock_port_host | int }}"
+        cas_mock_port_container: "{{ test_cas_mock_port_container | int }}"
+        cas_mock_network: "{{ test_cas_mock_network }}"
+        cas_mock_purge_network: "{{ test_cas_mock_purge_network }}"

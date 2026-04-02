@@ -13,12 +13,13 @@ A collection of professional, standalone Ansible roles for secure infrastructure
 
 ## Available Infrastructure Roles
 
-| Role | Status | Targets | Description |
-| :--- | :--- | :--- | :--- |
-| [**PostgreSQL**](./roles/postgres) | Stable | Debian, Ubuntu, Fedora, Rocky | Standalone DB with persistent storage and health monitoring. |
-| [**RabbitMQ**](./roles/rabbitmq) | Stable | Debian, Ubuntu, Fedora, Rocky | Message broker with Management UI and EPMD stability fixes. |
-| [**Airflow Common**](./roles/airflow_common) | Stable | Debian, Ubuntu, Fedora, Rocky | Core Airflow 3 initialization, DB migrations, and admin provisioning. |
-| [**Airflow Services**](./roles/airflow_services) | Stable | Debian, Ubuntu, Fedora, Rocky | Scalable execution of Webserver, Scheduler, and Celery Workers. |
+| Role | Status | Description |
+| :--- | :--- | :--- |
+| [**PostgreSQL**](./roles/postgres) | Stable | Standalone DB with persistent storage and health monitoring. |
+| [**RabbitMQ**](./roles/rabbitmq) | Stable | Message broker with Management UI and EPMD stability fixes. |
+| [**Airflow Common**](./roles/airflow_common) | Stable | Core Airflow 3 initialization, DB migrations, and admin provisioning. |
+| [**Airflow Services**](./roles/airflow_services) | Stable | Scalable execution of Webserver, Scheduler, and Celery Workers. |
+| [**CAS Mock**](./roles/cas_mock) | Stable | Standalone CAS 7 server for local SSO and authentication testing. |
 
 ## Quick Start
 
@@ -57,8 +58,11 @@ We enforce strict quality standards through automated testing and linting.
 
 ### Molecule Testing
 
+The role is validated via Molecule across Debian, Ubuntu, Fedora, and Rocky Linux.
+
 ```bash
 task postgres:test
+task cas:test
 ```
 
 ### Security & Linting

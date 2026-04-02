@@ -3,16 +3,20 @@ name: ansible_infra
 version: 1.0.0
 authors:
   - "addonol"
-description: "Infrastructure Airflow avec Postgres et RabbitMQ"
+description: >
+  Standalone and modular infrastructure roles (PostgreSQL, RabbitMQ, CAS Mock)
+  and Airflow 3 orchestration using Rootless Podman.
 readme: README.md
 license:
   - MIT
 tags:
   - infrastructure
+  - standalone
   - podman
-  - container
+  - rootless
   - airflow
   - postgres
   - rabbitmq
-  - rootless
-repository: "https://github.com"
+  - cas
+  - sso
+repository: "https://github.com/addonol/ansible-infra"

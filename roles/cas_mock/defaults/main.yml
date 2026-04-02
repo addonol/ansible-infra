@@ -1,0 +1,11 @@
+---
+
+cas_mock_hostname: "{{ ansible_host | default(inventory_hostname) }}"
+cas_mock_instance: "cas_mock_{{ inventory_hostname }}"
+cas_mock_user: "addonol"
+cas_mock_pass: "addonol123"
+cas_mock_port_host: 8081
+cas_mock_port_container: 8080
+cas_mock_network: "cas_network"
+cas_mock_image: "docker.io/apereo/cas:7.3.5"
+cas_mock_purge_network: true

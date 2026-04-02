@@ -1,0 +1,12 @@
+---
+- name: Purging - CAS Mock Role
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: CAS Mock Purging Resources
+      ansible.builtin.include_role:
+        name: cas_mock
+        tasks_from: clean.yml
+      vars:
+        cas_mock_purge_network: true

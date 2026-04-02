@@ -1,0 +1,20 @@
+---
+
+- name: Converge CAS Mock Role
+  hosts: all:!localhost
+  gather_facts: false
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: "Deploy CAS Mock instance for Molecule"
+      ansible.builtin.include_role:
+        name: cas_mock
+        tasks_from: main.yml
+      vars:
+        cas_mock_image: "{{ test_cas_mock_image }}"
+        cas_mock_user: "{{ test_cas_mock_user }}"
+        cas_mock_pass: "{{ test_cas_mock_pass }}"
+        cas_mock_port_host: "{{ test_cas_mock_port_host | int }}"
+        cas_mock_port_container: "{{ test_cas_mock_port_container | int }}"
+        cas_mock_network: "{{ test_cas_mock_network }}"

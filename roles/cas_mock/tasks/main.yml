@@ -1,0 +1,26 @@
+---
+
+- name: "Ensure CAS Network exists"
+  containers.podman.podman_network:
+    name: "{{ cas_mock_network }}"
+    state: present
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Launch CAS Mock Server: {{ cas_mock_instance }}"
+  containers.podman.podman_container:
+    name: "{{ cas_mock_instance }}"
+    image: "{{ cas_mock_image }}"
+    state: started
+    recreate: false
+    network: "{{ cas_mock_network }}"
+    env:
+      CAS_SERVER_NAME: "http://{{ cas_mock_hostname }}:{{ cas_mock_port_host }}"
+      CAS_SERVER_PREFIX: "/cas"
+      SERVER_PORT: "{{ cas_mock_port_container }}"
+      SERVER_SSL_ENABLED: "false"
+      CAS_AUTHN_ACCEPT_USERS: "{{ cas_mock_user }}::{{ cas_mock_pass }}"
+      CAS_TGC_SECURE: "false"
+      CAS_WARNING_COOKIE_SECURE: "false"
+    ports:
+      - "{{ cas_mock_port_host }}:{{ cas_mock_port_container }}"
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"

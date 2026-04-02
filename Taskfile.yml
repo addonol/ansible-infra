@@ -50,6 +50,7 @@ tasks:
                 if (current_grp == "airflow") icon = "🚀";
                 else if (current_grp == "postgres") icon = "🐘";
                 else if (current_grp == "rabbitmq") icon = "🐰";
+                else if (current_grp == "cas") icon = "🔑";
                 else if (current_grp == "test") icon = "🧪";
                 else if (current_grp == "vault") icon = "🔐";
                 else if (current_grp == "infra") icon = "⚙️";
@@ -119,6 +120,36 @@ tasks:
   airflow:test:
     desc: "Run isolated Molecule unit tests for Airflow Common role"
     dir: roles/airflow_common
+    silent: true
+    cmds:
+      - uv run molecule destroy
+      - uv run molecule test
+      - podman volume prune -f
+      - podman network prune -f
+
+  # ----------------------------------------------------------------------------
+  # SECTION: CAS (SSO MOCK & PROXY)
+  # ----------------------------------------------------------------------------
+
+  cas:deploy:
+    desc: "Deploy CAS Mock Server for local SSO testing"
+    deps: [check-vault]
+    silent: true
+    cmds:
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/deploy_cas_mock.yml
+
+  cas:purge:
+    desc: "Purge CAS Mock resources"
+    silent: true
+    cmds:
+      - >
+        {{.ANSIBLE_PLAY}} {{.PLAYBOOKS}}/clean_cas_mock.yml
+        -e "cas_mock_purge_network=true"
+
+  cas:test:
+    desc: "Run isolated Molecule unit tests for CAS Mock role"
+    dir: roles/cas_mock
     silent: true
     cmds:
       - uv run molecule destroy

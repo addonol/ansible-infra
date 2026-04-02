@@ -1,0 +1,16 @@
+---
+
+- name: "CAS Mock - Wait for Login page to be Ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ cas_mock_port_host }}/cas/login"
+    method: GET
+    status_code: 200
+  register: cas_mock_http_check
+  until: cas_mock_http_check.status == 200
+  retries: 30
+  delay: 5
+  delegate_to: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "CAS Mock - Confirm Service is Operational"
+  ansible.builtin.debug:
+    msg: "✅ CAS Mock is UP and reachable at http://{{ cas_mock_hostname }}:{{ cas_mock_port_host }}/cas/login"

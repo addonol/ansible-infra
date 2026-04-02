@@ -1,0 +1,12 @@
+---
+
+idx: "{{ ansible_play_hosts_all.index(inventory_hostname) }}"
+
+test_cas_mock_image: "docker.io/apereo/cas:7.3.5"
+test_cas_mock_instance: "cas_mock_{{ inventory_hostname }}"
+test_cas_mock_user: "admin"
+test_cas_mock_pass: "admin_password"
+test_cas_mock_port_host: "{{ 8081 + idx | int }}"
+test_cas_mock_port_container: 8080
+test_cas_mock_network: "cas_test_network_{{ inventory_hostname }}"
+test_cas_mock_purge_network: true

@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: addonol
+  description: >
+    A standalone and highly dynamic Apereo CAS mock server role.
+    It features rootless Podman deployment, built-in healthchecks,
+    and pre-configured HTTP execution without complex SSL setups.
+    Designed for full isolation and modular infrastructure.
+  company: none
+  license: MIT
+  min_ansible_version: "2.12"
+  galaxy_tags:
+    - cas
+    - sso
+    - mock
+    - authentication
+    - podman
+    - rootless
+    - infrastructure
+
+dependencies: []
