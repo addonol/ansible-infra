@@ -1,0 +1,127 @@
+<div id="airflow-config" class="content-section">
+    <span class="badge badge-airflow">Jinja2 Automation</span>
+    <h1>Configuration Deep-Dive</h1>
+    <p class="lead">
+        The <code>airflow.cfg.j2</code> template is the heart of the deployment. It dynamically adapts to
+        <strong>Airflow 3</strong> standards while maintaining backward compatibility.
+    </p>
+
+    <div class="card">
+        <h3><i class="fas fa-microchip"></i> Core & Auth Management</h3>
+        <p>
+            In the transition to Airflow 3, the selection of the <code>auth_manager</code> has become a
+            critical architectural decision. The framework utilizes conditional Jinja2 blocks to
+            automatically toggle between the legacy FAB (Flask App Builder) manager and
+            the modern FastAPI SimpleAuthManager. When the <code>airflow_use_fastapi</code>
+            flag is enabled, the system bypasses traditional RBAC in favor of a high-performance
+            identity provider. This allows for a truly stateless bootstrap, as admin
+            users are provisioned directly via the configuration file, eliminating the need for
+            manual user creation during the initial cluster setup.
+        </p>
+    </div>
+
+    <div class="card">
+    <h3><i class="fas fa-file-code"></i> The <code>airflow.cfg.j2</code> Template</h3>
+    <pre><code>[core]
+executor = {{ airflow_common_executor }}
+dags_folder = /opt/airflow/dags
+fernet_key = {{ airflow_common_fernet_key }}
+internal_api_secret_key = {{ airflow_common_jwt_secret }}
+
+# Dynamic Auth Manager Selection
+{% if airflow_use_fastapi | default(false) %}
+auth_manager = airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+{% else %}
+auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+{% endif %}
+
+[database]
+{% set postgres_uri = "postgresql+psycopg2://" ~ airflow_common_postgres_db_user ~ ":" ~ (airflow_common_postgres_db_pass | urlencode) %}
+sql_alchemy_conn = {{ postgres_uri }}@{{ airflow_common_postgres_instance }}:5432/{{ airflow_common_postgres_db_name }}
+
+[celery]
+{% set rabbitmq_uri = "amqp://" ~ airflow_common_rabbitmq_user ~ ":" ~ (airflow_common_rabbitmq_pass | urlencode) %}
+broker_url = {{ rabbitmq_uri }}@{{ airflow_common_rabbitmq_instance }}:{{ airflow_common_rabbitmq_management_port }}//
+result_backend = db+postgresql://{{ airflow_common_postgres_db_user }}:{{ airflow_common_postgres_db_pass | urlencode }}@{{ airflow_common_postgres_instance }}:{{ airflow_common_postgres_port}}/{{ airflow_common_postgres_db_name }}
+
+[api_fastapi]
+enabled = {{ airflow_use_fastapi | default(false) | lower }}
+jwt_secret = {{ airflow_common_jwt_secret }}</code></pre>
+</div>
+
+
+    <div class="grid-responsive">
+        <div class="card">
+            <h3><i class="fas fa-link"></i> Connection String Sanitization</h3>
+            <p>
+                The construction of connection strings (URIs) for PostgreSQL and
+                RabbitMQ is a delicate process due to potential special characters
+                in passwords. To prevent deployment-breaking syntax errors, the framework enforces the
+                <code>urlencode</code> filter on all credentials. This ensures that the
+                <code>result_backend</code> and <code>broker_url</code> are always RFC-compliant,
+                allowing Celery workers to maintain stable persistence cycles with the metadata store.
+            </p>
+        </div>
+        <div class="card">
+            <h3><i class="fas fa-shield-alt"></i> Encryption & JWT Security</h3>
+            <p>
+                Security is baked directly into the configuration layer through a multi-key strategy.
+                The Fernet Key is utilized for encrypting connection secrets within
+                the database, while a shared JWT Secret is distributed across the
+                API-Server, Webserver, and Workers. This shared secret allows for seamless
+                M2M (Machine-to-Machine) validation, ensuring that every internal
+                request is cryptographically signed and verified before execution.
+            </p>
+        </div>
+    </div>
+
+    <div class="card card-orange">
+        <h3><i class="fas fa-vault"></i> Ansible Vault & Variable Management</h3>
+        <p>
+            Sensitive data—Database passwords, <code>fernet_key</code>, and <code>jwt_secret</code>—are encrypted
+            using <strong>Ansible Vault</strong>. Decryption occurs only during deployment.
+        </p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-clipboard-check"></i> Automated Deployment Lifecycle</h3>
+        <div class="step-list">
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Infrastructure & Secret Provisioning:</strong>
+                    The role first establishes a dedicated Podman Network for secure inter-container
+                    routing. It then provisions the <code>airflow.cfg</code> as a secure Podman Secret,
+                    guaranteeing that sensitive parameters are never written to the host's persistent disk
+                    in unencrypted form.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Database & Identity Migration:</strong>
+                    Before the main services launch, a transient "init" container is triggered to execute
+                    <code>airflow db migrate</code>. This process conditionally initializes the modern
+                    FastAPI SimpleAuthManager or legacy RBAC users, then self-destructs (<code>rm: true</code>)
+                    to minimize the environment's attack surface.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Volume & Permission Management:</strong>
+                    Host directories for DAGs, Logs, and Plugins are provisioned with specific
+                    <code>0775</code> permissions. By utilizing <code>userns: keep-id</code> mapping,
+                    the role allows rootless containers to write to these volumes as the host user,
+                    resolving traditional "Permission Denied" issues in rootless environments.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Orchestrated Service Launch:</strong>
+                    The final stage maps Airflow commands (Webserver, Scheduler, Worker) to
+                    individual containers. Each container is launched with strictly limited
+                    resources and mounts only the necessary secrets, ensuring a fully decoupled
+                    and resilient execution tier.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
