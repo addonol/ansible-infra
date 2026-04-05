@@ -1,0 +1,92 @@
+<div id="airflow-auth" class="content-section">
+    <span class="badge badge-security">Identity Framework</span>
+    <h1>Authentication Strategies</h1>
+    <p class="lead">
+        The Forge Framework supports a multi-layered authentication strategy, choosing the optimal mechanism
+        based on the actor (Human vs. Machine) and the required trust level.
+    </p>
+
+    <div class="grid-responsive">
+        <!-- API KEY -->
+        <div class="card">
+            <span class="badge badge-infra">Static Access</span>
+            <h3><i class="fas fa-key"></i> 1. API Keys (Service-to-Service)</h3>
+            <p>
+                The <strong>API Key</strong> is a persistent, long-lived token passed in HTTP headers.
+                In this framework, it is primarily used for simple identification between legacy internal
+                services or third-party providers that do not support dynamic token exchange.
+            </p>
+            <p>
+                <strong>Security Posture:</strong> While easy to implement, API keys carry higher risk
+                as they are static. If a key is compromised, access remains open until manual revocation.
+                They provide identity but lack the rich, time-bound "claims" found in modern tokens.
+            </p>
+        </div>
+
+        <!-- JWT -->
+        <div class="card">
+            <span class="badge badge-security">Stateless Claims</span>
+            <h3><i class="fas fa-file-signature"></i> 2. JWT (Stateless Metadata)</h3>
+            <p>
+                The <strong>JSON Web Token (JWT)</strong> is a cryptographically signed standard (RFC 7519)
+                used for secure, stateless communication. Our <strong>API-Server</strong> utilizes JWTs to
+                verify requests without hitting the metadata database every time.
+            </p>
+            <p>
+                <strong>Technical Edge:</strong> Because the token contains encrypted claims (user roles,
+                expiration, permissions), the server simply validates the signature. This decoupling
+                is essential for the high-performance requirements of <strong>Airflow 3</strong>
+                execution cycles.
+            </p>
+        </div>
+    </div>
+
+    <!-- OIDC -->
+    <div class="card">
+        <span class="badge badge-airflow">SSO Standard</span>
+        <h3><i class="fas fa-id-badge"></i> 3. OIDC (OpenID Connect Identity Layer)</h3>
+        <p>
+            <strong>OpenID Connect (OIDC)</strong> sits on top of the OAuth 2.0 framework to provide a
+            complete identity protocol. Unlike an API Key (an identifier) or a JWT (a format), OIDC defines
+            the <strong>entire handshake flow</strong> between the User, the Client (Airflow), and the
+            Identity Provider (CAS Server).
+        </p>
+
+        <div class="highlight-box">
+            <i class="fas fa-info-circle quote-icon"></i>
+            <span>
+                In this infrastructure, OIDC allows Airflow to delegate authentication to the
+                <strong>CAS Server</strong>. The user logs in once at the perimeter, and the CAS
+                issues an <strong>ID Token</strong> that proves the human identity behind the request,
+                enabling seamless Single Sign-On (SSO).
+            </span>
+        </div>
+
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h4>Pros: Centralized Identity</h4>
+                <p>
+                    User management is centralized. Disabling a user in the CAS Server immediately
+                    revokes their access across all connected framework components.
+                </p>
+            </div>
+            <div class="card">
+                <h4>Cons: Handshake Complexity</h4>
+                <p>
+                    Requires a stable network connection between the Proxy and the CAS Server. A failure
+                    in the OIDC provider locks out all human operators from the UI.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-orange">
+        <h3><i class="fas fa-microchip"></i> Architectural Recommendation</h3>
+        <p>
+            The framework enforces a <strong>Hybrid Model</strong>: We use <strong>OIDC/CAS</strong> for
+            human administrators accessing the UI, while <strong>JWTs</strong> and <strong>API Keys</strong>
+            (stored in Ansible Vault) secure the high-speed Machine-to-Machine (M2M) traffic between
+            Workers, the API-Server, and external datasets.
+        </p>
+    </div>
+</div>

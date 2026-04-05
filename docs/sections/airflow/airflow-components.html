@@ -1,0 +1,154 @@
+<div id="airflow-components" class="content-section">
+    <span class="badge badge-airflow">Technical Deep-Dive</span>
+    <h1>System Components</h1>
+    <p class="lead">
+        The Forge Framework orchestrates several decoupled services, each running in an isolated OCI container.
+        Understanding the lifecycle and failure modes of these components is critical for maintaining high
+        availability in a production environment.
+    </p>
+
+    <h2>1. Identity & Perimeter Security</h2>
+    <div class="grid-responsive">
+
+        <div class="card">
+            <h3><i class="fas fa-id-card"></i> CAS Server (SSO Identity Provider)</h3>
+            <p>
+                The CAS Server acts as the central Identity Provider (IdP) for the entire
+                infrastructure. It centralizes user authentication by validating credentials against a backend
+                user store. Once a user is authenticated, the CAS Server issues a Service Ticket
+                that allows the user to access protected applications without re-entering credentials. If the
+                CAS Server is unavailable, the entire SSO flow is broken: users cannot log in to the Airflow UI,
+                as the initial authentication handshake cannot be completed, effectively locking down the
+                frontend while background tasks continue to run.
+            </p>
+        </div>
+        <div class="card">
+            <h3><i class="fas fa-user-shield"></i> CAS Proxy / Gatekeeper</h3>
+            <p>
+                The CAS Proxy (or Auth-Proxy) sits at the network edge as a stateless interceptor.
+                Its role is to catch every incoming request to the API-Server or UI
+                and verify the presence of a valid session or ticket. It offloads the authentication logic from
+                Airflow itself, ensuring that unauthenticated traffic never reaches the core services. If the
+                Proxy fails or misinterprets the CAS protocol, users will face "401 Unauthorized" or "502 Bad Gateway"
+                errors, even if their credentials are correct, as the secure tunnel between the edge and the
+                internal control plane is severed.
+            </p>
+        </div>
+    </div>
+
+    <h2>2. Persistence & Messaging Layer</h2>
+    <div class="grid-responsive">
+        <div class="card">
+            <h3><i class="fas fa-database"></i> PostgreSQL</h3>
+            <p>
+                PostgreSQL serves as the ultimate source of truth, storing all task states,
+                DAG definitions, and user permissions. It has no internal dependencies but is the
+                most critical component of the stack. A database outage results in a
+                total system blackout: no other component can initialize or function as they all require
+                the metadata store to resolve their operational state.
+            </p>
+            <a href="javascript:void(0)" onclick="window.showSection('common')" class="card-link">
+                View Standalone Postgres Role <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-comments"></i> RabbitMQ (Broker)</h3>
+            <p>
+                Acting as the communication bridge, RabbitMQ buffers task commands until a
+                worker is available to claim them. It is a standalone service but requires persistent storage
+                for queue durability. A crash of the broker prevents the Scheduler from dispatching any work.
+                Crucially, if RabbitMQ is deployed without persistent volumes, all currently queued but
+                unclaimed tasks are lost during a restart.
+            </p>
+            <a href="javascript:void(0)" onclick="window.showSection('common')" class="card-link">
+                View Standalone RabbitMQ Role <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <h2>3. Airflow 3 Control Plane</h2>
+    <div class="card">
+        <h3><i class="fas fa-bolt"></i> FastAPI API-Server</h3>
+        <p>
+            As the central nervous system of Airflow 3, the FastAPI API-Server replaces the
+            legacy direct database access with a unified, secure RESTful layer. It acts as the gatekeeper for
+            both the UI and the Workers, relying heavily on PostgreSQL for metadata and
+            requiring a valid <code>internal_api_secret_key</code> to validate JWT-signed requests.
+            A failure of this service effectively freezes the cluster: while the Scheduler might continue to
+            queue tasks, the UI becomes inaccessible, and Workers are unable to heartbeat or update their
+            execution states.
+        </p>
+    </div>
+    <div class="grid-responsive">
+        <div class="card">
+            <h3><i class="fas fa-file-code"></i> DAG Processor</h3>
+            <p>
+                The DAG Processor serves as a security-hardened isolation layer whose primary
+                responsibility is to parse Python files into serialized JSON metadata. By decoupling the
+                parsing logic from the main Scheduler process, it ensures that a single malformed DAG script
+                cannot crash the orchestration engine or degrade its performance. It depends on the
+                API-Server to store its serialized outputs and requires consistent access
+                to the <code>dags_folder</code>. If the DAG Processor stops running, the system will continue
+                to execute existing tasks, but any new changes to DAG files or newly added pipelines will not
+                be detected or updated in the metadata database until the process is resumed.
+        </p>
+        </div>
+        <div class="card">
+            <h3><i class="fas fa-calendar-check"></i> Scheduler</h3>
+            <p>
+                The Scheduler is the logic engine that monitors DAG definitions and task
+                dependencies. It depends on the API-Server to synchronize state and the
+                DAG Processor to receive serialized metadata. If the Scheduler process
+                terminates, the pipeline flow stops immediately; although active tasks in the workers
+                will complete their execution, no new tasks will be triggered or dispatched to the broker.
+            </p>
+        </div>
+    </div>
+    <div class="card">
+        <h3><i class="fas fa-clock"></i> Triggerer</h3>
+        <p>
+            To optimize resource consumption, the Triggerer handles deferred tasks
+            asynchronously. It monitors the metadata database for events to wake up suspended tasks
+            without occupying worker slots. If this component is missing or fails, any task using the
+            <code>deferrable=True</code> flag will hang indefinitely in a "deferred" state, as no
+            active process is listening for the external resume signals.
+        </p>
+        </div>
+
+    <h2>3. Execution Tier</h2>
+    <div class="card">
+        <h3><i class="fas fa-tools"></i> Celery Workers (Rootless)</h3>
+        <p>
+            The Celery Workers are the primary execution units where your business logic
+            actually runs. Operating in a 100% rootless environment, they depend on RabbitMQ
+            to receive task commands and the API-Server to report progress via JWT-signed
+            handshakes. In the event of a worker failure, tasks remain securely "Queued" in the broker
+            until a healthy worker becomes available. However, if a worker is misconfigured or missing
+            internal Python dependencies, specific tasks will fail with an <code>ImportError</code> or
+            runtime exception, though this isolation prevents a faulty task from impacting the health
+            or stability of other components in the cluster.
+        </p>
+    </div>
+
+    <div class="card card-orange">
+        <h3><i class="fas fa-vault"></i> Security Strategy: Advanced Secret Management</h3>
+        <p>
+            To maintain a strict <strong>Zero-Trust</strong> security posture, the framework ensures that no sensitive
+            credentials—such as PostgreSQL passwords, RabbitMQ URI strings, Fernet keys, or JWT shared secrets—ever
+            reside in plain text within the source control repository. All sensitive variables are encrypted at
+            rest using <strong>Ansible Vault</strong> (AES-256), requiring a secure vault password during the
+            provisioning phase to decrypt the operational parameters.
+        </p>
+        <p>
+            During the deployment lifecycle, these secrets are dynamically injected into the <code>airflow.cfg</code>
+            and <code>webserver_config.py</code> templates. To further harden the infrastructure, the framework
+            utilizes <strong>Podman Secrets</strong>, ensuring that credentials are mounted into the rootless
+            containers as temporary in-memory files rather than persistent environment variables, which could be
+            exposed via process inspection. If the vault password is missing or a secret is misconfigured, the
+            deployment fails immediately during the "Pre-flight" check, preventing the launch of an insecure
+            or non-functional cluster.
+        </p>
+    </div>
+
+</div>

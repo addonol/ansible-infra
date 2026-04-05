@@ -1,0 +1,429 @@
+<div id="common-rabbitmq" class="content-section">
+    <span class="badge badge-infra">Generic Service</span>
+    <h1>Role: RabbitMQ Message Broker</h1>
+    <p class="lead">
+        RabbitMQ is an open-source message broker that facilitates the asynchronous exchange of data
+        between distributed applications, ensuring reliable delivery through a decoupled architecture.
+    </p>
+
+    <div class="card">
+        <h2>How Messaging Works: The Producer-Consumer Model</h2>
+        <p>
+            The primary goal of a Message Broker is to act as an intermediary. Instead of
+            Service A talking directly to Service B (which creates a rigid dependency), they communicate
+            through "Messages" managed by RabbitMQ.
+        </p>
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h3><i class="fas fa-paper-plane"></i> The Producer</h3>
+                <p>
+                    A Producer is any application that sends data to the broker. It creates a
+                    message and targets an Exchange with specific routing
+                    instructions, without knowing who will eventually process the data.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-random"></i> The Exchange</h3>
+                <p>
+                    The Exchange is the routing engine. It receives messages from Producers
+                    and pushes them into Queues based on rules (Bindings).
+                    It ensures that the right data reaches the right destination.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Memory-Centric Architecture</h2>
+        <p>
+            RabbitMQ is engineered for high-speed throughput. Unlike a traditional database that prioritizes
+            disk I/O, RabbitMQ operates primarily as an In-Memory system to deliver
+            thousands of messages per second with sub-millisecond latency.
+        </p>
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h3><i class="fas fa-tachometer-alt"></i> In-Memory Velocity</h3>
+                <p>
+                    When a message is published, it is stored in the RabbitMQ to be served
+                    instantly to the next available Consumer. This volatile storage ensures that
+                    communication remains fluid and near-instantaneous.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-layer-group"></i> Smart Paging to Disk</h3>
+                <p>
+                    If memory usage grows too high, RabbitMQ employs an intelligent Paging
+                    mechanism. It offloads older messages from RAM to the Host Disk
+                    to free up space, ensuring operational stability under heavy load.
+                </p>
+            </div>
+        </div>
+        <div class="highlight-box">
+            <i class="fas fa-info-circle quote-icon"></i>
+            <span>
+                The Memory High Watermark: When the broker reaches a pre-defined
+                threshold (typically 40% of RAM), it triggers Flow Control.
+                It will temporarily "block" Producers from sending new data until Consumers
+                have cleared the backlog.
+            </span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Queues and Consumers: Resilience & Scalability</h2>
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h3><i class="fas fa-list-ol"></i> The Queue (Buffer)</h3>
+                <p>
+                    The Queue is a durable buffer. If the receiving application is down or
+                    under heavy load, RabbitMQ stores the messages safely. This provides
+                    fault tolerance: data is never lost, it is simply
+                    queued until the system is ready.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-hard-hat"></i> The Consumer</h3>
+                <p>
+                    The Consumer is the application that "subscribes" to a queue to process
+                    incoming work. You can scale your infrastructure by simply adding
+                    more consumers to the same queue to handle spikes in traffic.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <span class="badge badge-infra">Automation Blueprint</span>
+        <h2>Ansible Role Implementation</h2>
+        <p>
+            The RabbitMQ role is designed to be idempotent and stateles.
+            It manages the entire lifecycle of the broker, from network isolation to secure secret injection
+            using the following variable schema.
+        </p>
+
+        <div class="card" style="background: #fcfcfc; padding: 24px; border: 1px solid var(--border);">
+            <h3 style="font-size: 1rem;"><i class="fas fa-code"></i> Default Variables (defaults/main.yml)</h3>
+            <pre style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569;">
+rabbitmq_instance: "standalone_rabbitmq"
+rabbitmq_image: "docker.io/library/rabbitmq:3.13-management-alpine"
+rabbitmq_volume: "rabbitmq_data"
+rabbitmq_network: "rabbitmq_network"
+rabbitmq_secret_name: "rabbitmq_password"
+rabbitmq_user: "rabbitmq_user"
+rabbitmq_pass: "changeme"
+rabbitmq_management_port: 5672
+rabbitmq_ui_port: 15672</pre>
+        </div>
+
+        <div class="step-list mt-24">
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Data Persistence:</strong>
+                    The <code>rabbitmq_volume</code> variable ensures that all Mnesia data, definitions,
+                    and message backlogs are stored on a persistent host mount. By setting
+                    <code>rabbitmq_purge_data: false</code>, the role guarantees that database
+                    files are preserved across container updates or accidental service restarts.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Network Segregation:</strong>
+                    Using <code>rabbitmq_network</code>, the role creates a dedicated, software-defined
+                    bridge. This ensures that the AMQP protocol (<code>5672</code>) and the Management
+                    UI (<code>15672</code>) are only accessible to containers within the same
+                    namespace, effectively shielding the broker from external port scans.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Secret Management:</strong>
+                    The role utilizes <code>rabbitmq_secret_name</code> to handle the
+                    <strong>Podman Secret</strong> lifecycle. Decrypted values from
+                    <strong>Ansible Vault</strong> are injected as temporary in-memory files,
+                    ensuring that <code>rabbitmq_pass</code> is never exposed in the process
+                    list (<code>ps aux</code>) or logs.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    We use the <code>3.13-management-alpine</code> tag. Alpine Linux provides
+                    a minimal attack surface, while the <code>-management</code> suffix
+                    automatically pre-installs the necessary plugins for real-time monitoring
+                    and metrics collection through the UI.
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="background: #fcfcfc; padding: 24px; border: 1px solid var(--border);">
+            <h3 style="font-size: 1rem;"><i class="fas fa-code"></i> Default Main (tasks/main.yml)</h3>
+            <pre style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569;">
+- name: Set deployment facts
+  ansible.builtin.set_fact:
+    rabbitmq_delegate_host: "{{ (molecule_yml is defined) | ternary('localhost', inventory_hostname) }}"
+
+- name: "Ensure network exists: {{ rabbitmq_network }}"
+  containers.podman.podman_network:
+    name: "{{ rabbitmq_network }}"
+    state: present
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+
+- name: "Create password secret: {{ rabbitmq_secret_name }}"
+  containers.podman.podman_secret:
+    name: "{{ rabbitmq_secret_name }}"
+    data: "{{ rabbitmq_pass }}"
+    state: present
+  no_log: true
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+
+- name: "Create RabbitMQ config secret for instance: {{ rabbitmq_instance ~ '_config' }}"
+  containers.podman.podman_secret:
+    name: "{{ rabbitmq_instance }}_config"
+    data: "{{ lookup('template', 'rabbitmq.conf.j2') }}"
+    state: present
+  delegate_to: "{{ rabbitmq_delegate_host }}"
+
+- name: "Launch RabbitMQ container: {{ rabbitmq_instance }}"
+  containers.podman.podman_container:
+    name: "{{ rabbitmq_instance }}"
+    image: "{{ rabbitmq_image }}"
+    state: started
+    hostname: "{{ rabbitmq_instance }}"
+    etc_hosts: "{{ {rabbitmq_instance: '127.0.0.1'} }}"
+    recreate: false
+    restart_policy: always
+    network: "{{ rabbitmq_network }}"
+    userns: keep-id
+    secrets:
+      - "{{ rabbitmq_secret_name }}"
+      - "{{ rabbitmq_instance }}_config"
+    env:
+      RABBITMQ_CONFIG_FILE: "/run/secrets/{{ rabbitmq_instance }}_config"
+      RABBITMQ_NODENAME: "rabbit@{{ rabbitmq_instance }}"
+    ports:
+      - "{{ rabbitmq_management_port | mandatory }}:5672"
+      - "{{ rabbitmq_ui_port | mandatory }}:15672"
+    volumes:
+      - "{{ rabbitmq_volume }}:/var/lib/rabbitmq:Z"
+    health_cmd: "rabbitmq-diagnostics -q check_running"
+    health_interval: "20s"
+    health_timeout: "10s"
+    health_retries: 10
+    health_start_period: "60s"
+  delegate_to: "{{ rabbitmq_delegate_host }}"</pre>
+        </div>
+
+        <div class="step-list mt-24">
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Dynamic Deployment Fact (Hybrid Support):</strong>
+                    The role starts by calculating the <code>rabbitmq_delegate_host</code>. It detects if
+                    it's running under Molecule (testing) or a real Inventory.
+                    This allows the playbook to "delegate" tasks to localhost during tests, ensuring your
+                    CI/CD pipeline remains fast and predictable without extra configuration.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Software-Defined Isolation (SDN):</strong>
+                    By ensuring a dedicated Podman Network, we create a private bridge
+                    where only authorized containers can "see" each other. This prevents lateral
+                    movement on the host: an unrelated container cannot scan or attack the broker's
+                    AMQP port.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Cryptographic Secret Handling:</strong>
+                    Unlike standard deployments that pass passwords via <code>RABBITMQ_DEFAULT_PASS</code>,
+                    this role mounts credentials as Podman Secrets. The use of
+                    <code>no_log: true</code> is a critical security gate: it prevents Ansible from
+                    writing your production passwords into the host's <code>/var/log/ansible.log</code>
+                    or CI job logs.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Config-as-a-Secret (Template Injection):</strong>
+                    The <code>rabbitmq.conf.j2</code> itself is treated as a secret. This allows the
+                    role to inject the configuration into the read-only <code>/run/secrets/</code>
+                    mount inside the container. This prevents any process (or attacker) from modifying the
+                    broker's settings while it is running.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>User Namespace Mapping (keep-id):</strong>
+                    Rootless containers often struggle with "Permission Denied" on volumes. By using
+                    <code>userns: keep-id</code>, the container process runs with the exact same UID
+                    as the host user who launched it. This ensures that the <code>rabbitmq_volume</code>
+                    (marked with <code>:Z</code> for SELinux) is fully writable without requiring
+                    complex <code>chown</code> operations.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Resilient Health Diagnostics:</strong>
+                    We don't just check if the container is "up". The <code>health_cmd</code> executes
+                    <code>rabbitmq-diagnostics</code>, which queries the Erlang VM (BEAM)
+                    itself. This ensures the broker is functionally ready to accept AMQP traffic before
+                    dependent services (like Airflow Workers) are allowed to start.
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+<div class="card">
+    <span class="badge badge-security">Quality Assurance</span>
+    <h2>Verification & Lifecycle Management</h2>
+    <p>
+        The role includes automated testing and cleanup tasks to ensure that the deployment is not
+        only functional but also remains cryptographically secure throughout its lifecycle.
+    </p>
+
+    <div class="grid-responsive">
+        <!-- Verification Logic -->
+        <div class="card">
+            <h3><i class="fas fa-vial"></i> Automated Health & Security Audit</h3>
+            <p>
+                The <code>verify.yml</code> task performs a deep inspection of the running container.
+                Beyond simple connectivity, it executes a two-stage validation:
+            </p>
+            <ul>
+                <li>
+                    <strong>State Persistence:</strong> It waits up to 5 minutes (60 retries) for the
+                    internal health check to return a <code>healthy</code> status.
+                </li>
+                <li>
+                    <strong>Anti-Leak Check:</strong> It inspects the container metadata to ensure
+                    that the <code>rabbitmq_pass</code> is **not** visible in the clear. If a
+                    leak is detected, the deployment is aborted with a Security Alert.
+                </li>
+            </ul>
+        </div>
+
+        <!-- Cleanup Logic -->
+        <div class="card">
+            <h3><i class="fas fa-eraser"></i> Controlled Environment Cleanup</h3>
+            <p>
+                The <code>clean.yml</code> task allows for a surgical removal of the infrastructure.
+                It follows a strict "Safety-First" approach to prevent accidental data loss:
+            </p>
+            <ul>
+                <li>
+                    <strong>Secrets First:</strong> In-memory secrets are wiped immediately to
+                    ensure no sensitive data remains on the host.
+                </li>
+                <li>
+                    <strong>Conditional Purge:</strong> Volumes and networks are only removed if
+                    the <code>rabbitmq_purge_data</code> flag is explicitly set to <code>true</code>.
+                    By default, your production data is preserved.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- CODE BLOCK: VERIFICATION ASSERT -->
+    <div class="card">
+        <h3><i class="fas fa-clipboard-check"></i> Security Assertion Logic</h3>
+        <p>
+            This Ansible snippet demonstrates how the framework guarantees that secrets are
+            correctly handled via Podman Secrets instead of insecure environment variables.
+        </p>
+        <pre>
+- name: "Assert Security & Readiness"
+  ansible.builtin.assert:
+    that:
+      - "'healthy' in rabbitmq_health.stdout"
+      - "rabbitmq_pass not in rabbitmq_inspect.stdout"
+    fail_msg: "SECURITY ALERT: Secret leak detected!"
+        </pre>
+    </div>
+</div>
+
+<div class="card card-orange">
+    <h3><i class="fas fa-trash-alt"></i> How to Reset the Environment</h3>
+    <p>To completely wipe the RabbitMQ instance including all persistent data, use the following command:</p>
+    <pre style="background: #0f172a; color: #e2e8f0;">
+ansible-playbook playbooks/clean_rabbitmq.yml -e "rabbitmq_purge_data=true rabbitmq_purge_network=true"</pre>
+</div>
+
+
+
+
+<div class="card card-orange">
+    <h3><i class="fas fa-terminal"></i> Deployment Command</h3>
+    <p>To deploy the RabbitMQ standalone instance using this role, run the following playbook command:</p>
+    <pre style="background: #0f172a; color: #e2e8f0;">
+ansible-playbook -i inventory.yml playbooks/deploy_rabbitmq.yml --ask-vault-pass</pre>
+</div>
+
+    <div class="card card-orange">
+        <h3><i class="fas fa-shield-alt"></i> Security Best Practice</h3>
+        <p>
+            This role enforces the Principle of Least Privilege. It
+            disables the default administrative accounts and creates unique,
+            encrypted credentials for each connected service via Ansible Vault.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Operational Challenges & Trade-offs</h2>
+        <p>
+            While RabbitMQ provides exceptional flexibility, it introduces specific complexities
+            that must be managed to ensure long-term stability in a production environment.
+        </p>
+
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Resource Exhaustion</h3>
+                <p>
+                    Because it is memory-centric, RabbitMQ is highly sensitive to RAM pressure.
+                    If consumers are too slow, the "Paging to Disk" process can cause a dramatic
+                    drop in throughput, leading to a system-wide "Backpressure" that might freeze
+                    the producers.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-hourglass-half"></i> Large Queue Penalty</h3>
+                <p>
+                    RabbitMQ is designed for short-lived messages. It performs
+                    poorly when queues grow into the millions. Large backlogs increase the
+                    overhead of the Erlang Garbage Collector, which can lead to increased
+                    CPU spikes and unstable latency.
+                </p>
+            </div>
+        </div>
+
+        <div class="grid-responsive mt-24">
+            <div class="card">
+                <h3><i class="fas fa-sync"></i> Complexity of High Availability</h3>
+                <p>
+                    Setting up a truly resilient cluster (Quorum Queues) is significantly
+                    more complex than a standalone instance. It requires a deep understanding
+                    of the Raft consensus protocol and strict network
+                    partitioning (split-brain) management.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-brain"></i> Erlang Learning Curve</h3>
+                <p>
+                    Since RabbitMQ runs on the Erlang VM (BEAM), troubleshooting
+                    low-level performance issues or memory leaks requires specific knowledge
+                    that differs from standard Python or Java environments.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="zoomOverlay" onclick="closeZoom()">
+        <div class="zoom-card">
+            <img id="zoomedImg" src="" alt="Zoomed view">
+        </div>
+        <span class="zoom-close">&times;</span>
+    </div>
+
+</div>

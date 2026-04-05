@@ -1,0 +1,362 @@
+/* ==========================================================================
+    VARIABLES - Palette Pro & Soft
+========================================================================== */
+:root {
+    --sidebar-width: 280px;
+    --primary: #0ea5e9;        /* Bleu azur moderne */
+    --primary-dark: #0284c7;
+    --bg: #f8fafc;             /* Fond très clair et reposant */
+    --sidebar-bg: #ffffff;     /* Nav blanche pour un look épuré */
+    --text: #334155;           /* Gris ardoise (lisibilité optimale) */
+    --text-strong: #0f172a;    /* Titres quasi noirs */
+    --border: #e2e8f0;         /* Bordures très fines */
+    --code-bg: #0f172a;        /* Code sombre pro */
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    margin: 0;
+    display: flex;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 0.92rem; /* Texte un peu plus petit et pro */
+}
+
+/* ==========================================================================
+    SIDEBAR - Style "Clean Navigation"
+========================================================================== */
+nav {
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--sidebar-bg);
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    z-index: 100;
+}
+
+nav h2 {
+    padding: 24px;
+    font-size: 0.85rem;
+    color: var(--text-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-link {
+    padding: 10px 24px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.nav-link:hover { color: var(--primary); background: #f1f5f9; }
+.nav-link.active {
+    color: var(--primary);
+    background: #f0f9ff;
+    border-right: 2px solid var(--primary);
+}
+
+.nav-subtitle {
+    padding: 20px 24px 8px;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-subtitle:hover {
+    color: var(--primary);
+}
+
+.nav-collapse {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.nav-footer {
+    margin-top: auto;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: #fcfcfc;
+}
+
+/* ==========================================================================
+    MAIN & LAYOUT RESPONSIVE
+========================================================================== */
+main {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    padding: 48px 64px;
+    max-width: 1200px;
+}
+
+/* Sécurité anti-débordement pour les flex containers */
+.flex-container {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap; /* Important pour le responsive */
+    margin-bottom: 40px;
+}
+
+.flex-1-4 { flex: 1.4; min-width: 320px; }
+.flex-1 { flex: 1; min-width: 300px; }
+
+/* ==========================================================================
+    COMPOSANTS (CARDS & BOXES)
+========================================================================== */
+.card {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 32px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.card h2, .card h3 {
+    color: var(--text-strong);
+    font-weight: 600;
+    margin-top: 0;
+}
+
+.card-orange {
+    border-top: 4px solid #f59e0b;
+    background: #fffbeb;
+    margin-top: 40px;
+    border-radius: 8px;
+    padding: 32px;
+    border-left: 1px solid #fef3c7;
+    border-right: 1px solid #fef3c7;
+    border-bottom: 1px solid #fef3c7;
+}
+
+.card-orange h3 {
+    color: #b45309 !important;
+    margin-bottom: 15px;
+}
+
+.card-orange p {
+    color: #92400e;
+    font-size: 0.9rem;
+}
+
+.grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.highlight-box {
+    background: #f0f9ff;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 32px 0;
+    color: #0369a1;
+    display: flex;
+    gap: 16px;
+    border: 1px solid #bae6fd;
+}
+
+.border-purple {
+    border-left: 4px solid #7e22ce;
+    padding-left: 20px;
+}
+
+.border-primary {
+    border-left: 4px solid var(--primary);
+    padding-left: 20px;
+}
+
+.border-green {
+    border-left: 4px solid #166534;
+    padding-left: 20px;
+}
+
+.mt-24 {
+    margin-top: 24px;
+}
+
+/* ==========================================================================
+    BADGES
+========================================================================== */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+}
+
+.badge-airflow {
+    background: #e0f2fe;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
+.badge-security {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fee2e2;
+}
+
+.badge-infra {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.badge + h1 {
+    margin-top: 0 !important;
+}
+
+/* ==========================================================================
+    STEPS & CODE (PRÉCISION TECHNIQUE)
+========================================================================== */
+.step-list {
+    counter-reset: step-counter 0;
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.step-item {
+    counter-increment: step-counter;
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+.step-item::before {
+    content: counter(step-counter);
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: var(--primary-dark);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-right: 20px;
+}
+
+.step-content {
+    flex: 1;
+    min-width: 0;
+    padding-top: 4px;
+}
+
+pre {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid var(--primary);
+    padding: 24px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #475569;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 4px 6px -1px rgba(0,0,0,0.05);
+    overflow-x: auto;
+    white-space: pre;
+}
+
+pre code {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
+/* ==========================================================================
+    IMAGES & ZOOM
+========================================================================== */
+.card-img-container {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+}
+
+.img-zoomable { cursor: zoom-in; width: 100%; height: auto; border-radius: 4px; }
+
+#zoomOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.95);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.zoom-card {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    max-width: 90%;
+    max-height: 90%;
+    display: flex;
+}
+
+#zoomedImg {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 4px;
+    display: block;
+}
+
+.zoom-close {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    color: white;
+    font-size: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* ==========================================================================
+    ANIMATIONS & SECTIONS
+========================================================================== */
+.content-section { display: none; }
+.content-section.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+footer {
+    margin-top: 64px;
+    padding: 32px 0;
+    border-top: 1px solid var(--border);
+    color: #94a3b8;
+    font-size: 0.8rem;
+}

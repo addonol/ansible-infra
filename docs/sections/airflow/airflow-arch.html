@@ -1,0 +1,123 @@
+<div id="airflow-arch" class="content-section">
+    <span class="badge badge-airflow">Orchestration Map</span>
+    <h1>System Architecture</h1>
+    <p class="lead">A decoupled grid designed for high availability and secure communication,
+        leveraging a zero-trust identity layer.</p>
+
+    <div class="flex-container">
+        <div class="flex-1-4">
+            <div class="card card-img-container">
+                <img src="assets/img/airflow-architecture.png" class="img-zoomable" onclick="openZoom()">
+                <p class="img-caption">
+                    <i class="fas fa-search-plus"></i> Click to enlarge diagram
+                </p>
+            </div>
+        </div>
+        <div class="flex-1">
+            <div class="card">
+                <h3><i class="fas fa-layer-group"></i> Logical Segregation</h3>
+                <p>
+                    The infrastructure is partitioned into four isolated zones—Security, Core, Persistence,
+                    and External—to prevent lateral movement and contain potential failures.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-shield-alt"></i> Zero-Trust Ingress</h3>
+                <p>
+                    All traffic is intercepted at the edge by an Identity-Aware Proxy,
+                    offloading authentication from the core services and enforcing strict access control.
+                </p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-key"></i> M2M Security</h3>
+                <p>
+                    Automated JWT & Refresh Token lifecycles secure the Machine-to-Machine
+                    handshakes between workers and external APIs, shielding metadata from exposure.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>The Operational Lifecycle: Step-by-Step</h2>
+        <p>
+            The following narrative describes the complete journey of an orchestration task,
+            tracing the flow from the initial user request to the final external API execution.
+        </p>
+
+        <div class="step-list">
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Access & Identity Validation (Steps 1-3):</strong>
+                    The workflow begins at the network edge. When a user attempts to access the Airflow UI,
+                    the <code>cas-proxy</code> intercepts the request to verify session validity.
+                    Unauthenticated traffic is redirected to the <code>cas-server</code> (or Mock)
+                    for credential validation. Upon success, a secure service ticket is issued,
+                    granting a narrow-scope entry into the internal control plane.
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Ingress & State Visualization (Steps 4-5):</strong>
+                    Once through the perimeter, the <code>api-server</code> (FastAPI) acts as the
+                    stateless bridge for the <code>ui-react</code> frontend. Instead of the UI
+                    querying the database directly, it interacts solely with RESTful endpoints.
+                    This centralizes the execution logic and ensures that any action taken in
+                    the browser is validated by the server before reaching the persistence layer.
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Metadata Sync & Scheduling (Steps 6-7):</strong>
+                    While the <code>api-server</code> maintains the real-time state with <code>postgres</code>,
+                    the <code>scheduler</code> operates in parallel to identify tasks ready for
+                    execution. It relies on the <code>dag-processor</code> to receive serialized
+                    JSON versions of the Python DAG files, ensuring that complex parsing logic
+                    never interferes with the critical scheduling heartbeat.
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Task Queueing & Consumption (Steps 8-9):</strong>
+                    When a task dependency is met, the Scheduler pushes a command into the
+                    <code>rabbitmnq broker</code>. This durable message queue holds the task
+                    definition until an available <code>celery-worker</code>, running in a
+                    secure rootless container, claims the message. This decoupling allows the
+                    system to scale workers independently of the control plane load.
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>External Handshake & Execution (Step 10):</strong>
+                    The Worker executes the Python code within its isolated namespace. For tasks
+                    requiring external data, the worker initiates a secure M2M handshake to retrieve
+                    an Access JWT. For long-running operations, it utilizes a Refresh Token to maintain
+                    authorized communication without requiring manual intervention or hardcoded secrets.
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-content">
+                    <strong>Completion & Async Resumption (Step 11):</strong>
+                    Upon task completion, the Worker sends a final status update back to the
+                    <code>api-server</code> via a JWT-signed request. In cases where the
+                    task was deferred to save resources, the <code>triggerer</code> monitors
+                    the event loop and signals the server when the external condition is met,
+                    allowing the workflow to resume seamlessly.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="zoomOverlay" onclick="closeZoom()">
+        <div class="zoom-card">
+            <img id="zoomedImg" src="" alt="Zoomed view">
+        </div>
+        <span class="zoom-close">&times;</span>
+    </div>
+
+</div>

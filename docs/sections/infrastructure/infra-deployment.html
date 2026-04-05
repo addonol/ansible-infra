@@ -1,0 +1,15 @@
+<div id="deployment" class="content-section">
+    <h1>Deployment Operations</h1>
+    <div class="card">
+        <pre>
+# 1. Encrypt variables
+ansible-vault encrypt_string 'password' --name 'db_pass'
+
+# 2. Provision OS
+ansible-playbook -i inventory/prod.yml playbooks/common.yml
+
+# 3. Deploy Stack
+ansible-playbook -i inventory/prod.yml site.yml
+        </pre>
+    </div>
+</div>
